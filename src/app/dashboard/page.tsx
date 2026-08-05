@@ -36,7 +36,27 @@ if (!error && data) {
     await supabase.auth.signOut();
     router.push("/login");
   }
+async function eliminarPresupuesto(id: string) {
+  const confirmar = window.confirm(
+    "¿Seguro que deseas eliminar este presupuesto?"
+  );
 
+  if (!confirmar) return;
+
+  const { error } = await supabase
+    .from("presupuestos")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    alert("Error al eliminar el presupuesto");
+    return;
+  }
+
+  alert("✅ Presupuesto eliminado");
+
+  cargarPresupuestos();
+}
   return (
     <main className="min-h-screen bg-slate-100 p-8">
 
@@ -87,9 +107,16 @@ if (!error && data) {
   >
     ✏️ Editar
   </button>
+
+  <button
+    onClick={() => eliminarPresupuesto(p.id)}
+    className="bg-red-600 text-white px-4 py-2 rounded-lg"
+  >
+    🗑️ Eliminar
+  </button>
+</div>
 </div>
        
-      </div>
     ))
   )}
 </div>
