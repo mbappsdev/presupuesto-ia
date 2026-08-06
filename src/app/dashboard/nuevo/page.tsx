@@ -2,6 +2,8 @@
 import { useState, type FormEvent } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import Navbar from "@/components/Navbar";
+
 
 export default function NuevoPresupuestoPage() {
   const router = useRouter();
@@ -45,8 +47,11 @@ export default function NuevoPresupuestoPage() {
 }
 
   return (
-    <main className="min-h-screen bg-slate-100 p-8">
-      <div className="max-w-2xl mx-auto bg-white p-8 rounded-2xl shadow">
+     <main className="min-h-screen bg-slate-100">
+    
+      <Navbar />
+    
+        <div className="max-w-4xl mx-auto p-8">
 
         <h1 className="text-3xl font-bold mb-6">
           Nuevo presupuesto 📄

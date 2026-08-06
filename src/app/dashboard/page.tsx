@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import Navbar from "@/components/Navbar";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -58,10 +59,12 @@ async function eliminarPresupuesto(id: string) {
   cargarPresupuestos();
 }
   return (
-    <main className="min-h-screen bg-slate-100 p-8">
+    <main className="min-h-screen bg-slate-100">
 
-      <div className="max-w-4xl mx-auto">
+  <Navbar />
 
+    <div className="max-w-4xl mx-auto p-8">
+ 
         <h1 className="text-4xl font-bold mb-4">
           Bienvenido a PresupuestoIA 🚀
         </h1>
