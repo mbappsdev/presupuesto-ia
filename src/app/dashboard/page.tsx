@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Navbar from "@/components/Navbar";
+import { generarPDF } from "@/utils/pdf";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -61,9 +62,9 @@ async function eliminarPresupuesto(id: string) {
   return (
     <main className="min-h-screen bg-slate-100">
 
-  <Navbar />
+      <Navbar />
 
-    <div className="max-w-4xl mx-auto p-8">
+      <div className="max-w-4xl mx-auto p-8">
  
         <h1 className="text-4xl font-bold mb-4">
           Bienvenido a PresupuestoIA 🚀
@@ -87,40 +88,51 @@ async function eliminarPresupuesto(id: string) {
   {presupuestos.length === 0 ? (
     <p>No hay presupuestos todavía.</p>
   ) : (
-    presupuestos.map((p) => (
-      <div
-        key={p.id}
-        className="border rounded-xl p-4 mb-4 bg-white shadow"
+presupuestos.map((p) => (
+  <div
+    key={p.id}
+    className="border rounded-xl p-4 mb-4 bg-white shadow"
+  >
+    <h2 className="text-blue-600 font-bold text-lg mb-2">
+      Presupuesto Nº {String(p.numero).padStart(6, "0")}
+    </h2>
+
+    <h3 className="font-bold text-lg">
+      {p.cliente}
+    </h3>
+
+    <p>{p.empresa}</p>
+
+    <p>{p.descripcion}</p>
+
+    <p className="font-bold mt-2">
+      ${Number(p.precio).toLocaleString("es-AR")}
+    </p>
+
+    <div className="flex gap-2 mt-4">
+      <button
+        onClick={() => router.push(`/dashboard/editar/${p.id}`)}
+        className="bg-yellow-500 text-white px-4 py-2 rounded-lg"
       >
-        <h3 className="font-bold text-lg">
-          {p.cliente}
-        </h3>
+        ✏️ Editar
+      </button>
 
-        <p>{p.empresa}</p>
+      <button
+        onClick={() => eliminarPresupuesto(p.id)}
+        className="bg-red-600 text-white px-4 py-2 rounded-lg"
+      >
+        🗑️ Eliminar
+      </button>
 
-        <p>{p.descripcion}</p>
-
-        <p className="font-bold mt-2">
-          ${Number(p.precio).toLocaleString("es-AR")}
-        </p>
-        <div className="flex gap-2 mt-4">
-  <button
-    onClick={() => router.push(`/dashboard/editar/${p.id}`)}
-    className="bg-yellow-500 text-white px-4 py-2 rounded-lg"
-  >
-    ✏️ Editar
-  </button>
-
-  <button
-    onClick={() => eliminarPresupuesto(p.id)}
-    className="bg-red-600 text-white px-4 py-2 rounded-lg"
-  >
-    🗑️ Eliminar
-  </button>
-</div>
-</div>
-       
-    ))
+      <button
+        onClick={() => generarPDF(p)}
+        className="bg-green-600 text-white px-4 py-2 rounded-lg"
+      >
+        📄 PDF
+      </button>
+    </div>
+  </div>
+))
   )}
 </div>
       </div>

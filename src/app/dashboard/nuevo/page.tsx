@@ -24,10 +24,20 @@ export default function NuevoPresupuestoPage() {
     return;
   }
 
+  const { data: ultimo } = await supabase
+  .from("presupuestos")
+  .select("numero")
+  .eq("user_id", user.id)
+  .order("numero", { ascending: false })
+  .limit(1)
+  .single();
+
+const nuevoNumero = ultimo ? ultimo.numero + 1 : 1;
   const { error } = await supabase
     .from("presupuestos")
     .insert({
       user_id: user.id,
+      numero: nuevoNumero,
       cliente,
       empresa,
       descripcion,
@@ -41,7 +51,7 @@ export default function NuevoPresupuestoPage() {
 }
 
 
-  alert("Presupuesto guardado correctamente");
+  alert(`✅ Presupuesto Nº ${String(nuevoNumero).padStart(6, "0")} guardado correctamente`);
 
   router.push("/dashboard");
 }
