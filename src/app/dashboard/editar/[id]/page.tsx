@@ -13,6 +13,7 @@ export default function EditarPresupuestoPage() {
   const [empresa, setEmpresa] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [precio, setPrecio] = useState("");
+  const [moneda, setMoneda] = useState("ARS");
 
   useEffect(() => {
     cargarPresupuesto();
@@ -34,6 +35,7 @@ export default function EditarPresupuestoPage() {
     setEmpresa(data.empresa);
     setDescripcion(data.descripcion);
     setPrecio(data.precio.toString());
+    setMoneda(data.moneda || "ARS");
   }
 
   async function actualizarPresupuesto(
@@ -48,6 +50,7 @@ export default function EditarPresupuestoPage() {
         empresa,
         descripcion,
         precio: Number(precio),
+        moneda,
       })
       .eq("id", id);
 
@@ -96,13 +99,28 @@ export default function EditarPresupuestoPage() {
               onChange={(e) => setDescripcion(e.target.value)}
             />
 
-            <input
-              type="number"
-              className="w-full border p-3 rounded"
-              placeholder="Precio"
-              value={precio}
-              onChange={(e) => setPrecio(e.target.value)}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <select
+                className="border p-3 rounded"
+                value={moneda}
+                onChange={(e) => setMoneda(e.target.value)}
+              >
+                <option value="ARS">🇦🇷 ARS - Peso argentino</option>
+                <option value="USD">🇺🇸 USD - Dólar estadounidense</option>
+                <option value="EUR">🇪🇺 EUR - Euro</option>
+                <option value="BRL">🇧🇷 BRL - Real brasileño</option>
+                <option value="CLP">🇨🇱 CLP - Peso chileno</option>
+                <option value="UYU">🇺🇾 UYU - Peso uruguayo</option>
+              </select>
+
+              <input
+                type="number"
+                className="border p-3 rounded md:col-span-2"
+                placeholder="Precio"
+                value={precio}
+                onChange={(e) => setPrecio(e.target.value)}
+              />
+            </div>
 
             <button
               type="submit"

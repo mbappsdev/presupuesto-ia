@@ -21,19 +21,39 @@ export default function Navbar() {
     }`;
 
   return (
-    <nav className="bg-white shadow mb-8">
-      <div className="max-w-6xl mx-auto flex items-center justify-between px-6 py-4">
-        <h1 className="text-2xl font-bold text-blue-600">
+    <nav className="bg-white border-b shadow-sm">
+      <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <Link
+          href="/dashboard"
+          className="text-xl font-bold text-blue-600"
+        >
           PresupuestoIA
-        </h1>
+        </Link>
 
         <div className="flex gap-2">
-          <Link href="/dashboard" className={linkClass("/dashboard")}>
+          <Link
+            href="/dashboard"
+            className={linkClass("/dashboard")}
+          >
             🏠 Inicio
           </Link>
 
-          <Link href="/dashboard/nuevo" className={linkClass("/dashboard/nuevo")}>
+          <Link
+            href="/dashboard/nuevo"
+            className={linkClass("/dashboard/nuevo")}
+          >
             ➕ Nuevo
+          </Link>
+
+          <Link
+            href="/dashboard/empresa"
+            className={linkClass("/dashboard/empresa")}
+          >
+            🏢 Mi empresa
+          </Link>
+
+          <Link href="/dashboard/planes" className={linkClass("/dashboard/planes")}>
+            ⭐ Planes
           </Link>
 
           <button
