@@ -74,7 +74,7 @@ export default function DashboardPage() {
     // Cargar datos de la empresa
     const { data: empresaData, error: empresaError } = await supabase
       .from("empresa")
-      .select("plan, subscription_status, subscription_expires_at")
+      .select("*")
       .eq("user_id", user.id)
       .single();
 
