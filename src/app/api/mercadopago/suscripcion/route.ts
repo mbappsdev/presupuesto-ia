@@ -58,6 +58,11 @@ export async function POST(request: Request) {
 
     const data = await respuesta.json();
 
+    console.log("Mercado Pago subscription:", {
+      id: data.id,
+      status: data.status,
+    });
+
     if (!respuesta.ok) {
       console.error("Error Mercado Pago:", data);
 
