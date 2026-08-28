@@ -1,22 +1,31 @@
 import { NextResponse } from "next/server";
 
-export async function GET() {
+export async function POST() {
   const token = process.env.MERCADOPAGO_ACCESS_TOKEN;
 
   if (!token) {
     return NextResponse.json(
-      { ok: false, mensaje: "Access Token no configurado" },
+      {
+        ok: false,
+        mensaje: "Access Token no configurado",
+      },
       { status: 500 }
     );
   }
 
   try {
     const respuesta = await fetch(
-      "https://api.mercadopago.com/users/me",
+      "https://api.mercadopago.com/users/test",
       {
+        method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          site_id: "MLA",
+          description: "Comprador PresupuestoIA API",
+        }),
       }
     );
 
@@ -26,7 +35,8 @@ export async function GET() {
       return NextResponse.json(
         {
           ok: false,
-          mensaje: "No se pudo consultar Mercado Pago",
+          mensaje: "No se pudo crear el usuario de prueba",
+          error: data,
         },
         { status: respuesta.status }
       );
@@ -34,17 +44,19 @@ export async function GET() {
 
     return NextResponse.json({
       ok: true,
+      camposRecibidos: Object.keys(data),
+      email: data.email ?? null,
       id: data.id,
+      usuario: data.nickname,
       siteId: data.site_id,
-      countryId: data.country_id ?? null,
     });
   } catch (error) {
-    console.error("Error consultando Mercado Pago:", error);
+    console.error("Error creando usuario de prueba:", error);
 
     return NextResponse.json(
       {
         ok: false,
-        mensaje: "Error interno",
+        mensaje: "Error interno al crear el usuario de prueba",
       },
       { status: 500 }
     );

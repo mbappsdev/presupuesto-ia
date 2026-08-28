@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-export async function POST() {
+export async function POST(request: Request) {
   const token = process.env.MERCADOPAGO_ACCESS_TOKEN;
 
   if (!token) {
@@ -14,8 +14,22 @@ export async function POST() {
   }
 
   try {
+    const body = await request.json();
+
+    const { email, externalReference } = body;
+
+    if (!email || !externalReference) {
+      return NextResponse.json(
+        {
+          ok: false,
+          mensaje: "Faltan email o externalReference",
+        },
+        { status: 400 }
+      );
+    }
+
     const respuesta = await fetch(
-      "https://api.mercadopago.com/preapproval_plan",
+      "https://api.mercadopago.com/preapproval",
       {
         method: "POST",
         headers: {
@@ -24,13 +38,20 @@ export async function POST() {
         },
         body: JSON.stringify({
           reason: "PresupuestoIA Pro - Prueba",
+          payer_email: email,
+          external_reference: externalReference,
+
           auto_recurring: {
             frequency: 1,
             frequency_type: "months",
             transaction_amount: 100,
             currency_id: "ARS",
           },
-          back_url: "https://presupuesto-ia-cyan.vercel.app/dashboard/pro/pago",
+
+          back_url:
+            "https://presupuesto-ia-cyan.vercel.app/dashboard/pro/pago",
+
+          status: "pending",
         }),
       }
     );
@@ -43,7 +64,7 @@ export async function POST() {
       return NextResponse.json(
         {
           ok: false,
-          mensaje: "No se pudo crear el plan de prueba",
+          mensaje: "No se pudo crear la suscripción",
           error: data,
         },
         { status: respuesta.status }
@@ -52,17 +73,17 @@ export async function POST() {
 
     return NextResponse.json({
       ok: true,
-      planId: data.id,
+      subscriptionId: data.id,
       initPoint: data.init_point,
       status: data.status,
     });
   } catch (error) {
-    console.error("Error creando plan:", error);
+    console.error("Error creando suscripción:", error);
 
     return NextResponse.json(
       {
         ok: false,
-        mensaje: "Error interno al crear el plan",
+        mensaje: "Error interno al crear la suscripción",
       },
       { status: 500 }
     );

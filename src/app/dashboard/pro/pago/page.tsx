@@ -1,10 +1,80 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
+import { supabase } from "@/lib/supabase";
 
 export default function PagoProPage() {
   const router = useRouter();
+
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState("");
+
+  async function iniciarSuscripcion() {
+    try {
+      setCargando(true);
+      setError("");
+
+      // 1. Obtener usuario logueado
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        setError("No se pudo identificar tu usuario.");
+        return;
+      }
+
+      // 2. Buscar la empresa del usuario
+      const { data: empresa, error: empresaError } = await supabase
+        .from("empresa")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (empresaError || !empresa) {
+        console.error("Error obteniendo empresa:", empresaError);
+        setError("No se pudo encontrar tu empresa.");
+        return;
+      }
+
+      // 3. Crear la suscripción en Mercado Pago
+      const respuesta = await fetch("/api/mercadopago/suscripcion", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: "test_user_1051359909508570515@testuser.com",
+          externalReference: empresa.id,
+        }),
+      });
+
+      const data = await respuesta.json();
+
+      if (!respuesta.ok || !data.ok) {
+        console.error("Error creando suscripción:", data);
+        setError("No se pudo iniciar la suscripción.");
+        return;
+      }
+
+      // 4. Verificar que Mercado Pago devolvió el checkout
+      if (!data.initPoint) {
+        setError("Mercado Pago no devolvió el enlace de pago.");
+        return;
+      }
+
+      // 5. Ir al checkout de Mercado Pago
+      window.location.href = data.initPoint;
+    } catch (error) {
+      console.error("Error iniciando suscripción:", error);
+      setError("Ocurrió un error al iniciar el pago.");
+    } finally {
+      setCargando(false);
+    }
+  }
 
   return (
     <main className="min-h-screen bg-slate-100">
@@ -40,38 +110,46 @@ export default function PagoProPage() {
               </p>
 
               <p className="text-2xl font-bold">
-                Próximamente
+                $100 / mes
               </p>
             </div>
           </div>
 
           <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-3">
             <p className="font-semibold text-blue-800">
-                🧪 Modo de prueba
+              🧪 Modo de prueba
             </p>
 
             <p className="text-sm text-blue-700 mt-1">
-                Esta pantalla es una simulación. No se realizará ningún cobro.
+              Estamos probando la integración con Mercado Pago.
             </p>
           </div>
 
+          {error && (
+            <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3">
+              <p className="text-sm text-red-700">
+                {error}
+              </p>
+            </div>
+          )}
+
           <div className="mt-3 flex gap-3">
             <button
-                type="button"
-                onClick={() => router.push("/dashboard/pro")}
-                className="w-full border border-slate-300 py-3 rounded-xl font-semibold hover:bg-slate-50"
+              type="button"
+              onClick={() => router.push("/dashboard/pro")}
+              disabled={cargando}
+              className="w-full border border-slate-300 py-3 rounded-xl font-semibold hover:bg-slate-50 disabled:opacity-50"
             >
-                ← Volver
+              ← Volver
             </button>
 
             <button
-                type="button"
-                onClick={() =>
-                    alert("💳 El pago real se habilitará más adelante.")
-                }
-                className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700"
+              type="button"
+              onClick={iniciarSuscripcion}
+              disabled={cargando}
+              className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 disabled:opacity-50"
             >
-                Continuar →
+              {cargando ? "Conectando..." : "Continuar →"}
             </button>
           </div>
         </div>
