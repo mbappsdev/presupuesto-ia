@@ -75,16 +75,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true });
     }
 
+    const ahora = new Date();
+
+    const fechaFin = suscripcion.next_payment_date
+      ? new Date(suscripcion.next_payment_date)
+      : null;
+
+    let plan = "free";
     let subscriptionStatus = suscripcion.status;
 
     if (suscripcion.status === "authorized") {
+      plan = "pro";
       subscriptionStatus = "active";
+    }
+
+    if (suscripcion.status === "paused") {
+      subscriptionStatus = "paused";
+
+      if (fechaFin && fechaFin > ahora) {
+        plan = "pro";
+      }
     }
 
     const { error } = await supabaseAdmin
       .from("empresa")
       .update({
-        plan: suscripcion.status === "authorized" ? "pro" : "free",
+        plan,
         subscription_status: subscriptionStatus,
         subscription_started_at:
           suscripcion.date_created ?? new Date().toISOString(),

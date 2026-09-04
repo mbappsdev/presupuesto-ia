@@ -40,6 +40,9 @@ export async function POST(request: Request) {
           reason: "PresupuestoIA Pro - Prueba",
           payer_email: email,
           external_reference: externalReference,
+          
+          notification_url:
+           "https://presupuesto-ia-cyan.vercel.app/api/mercadopago/webhook",
 
           auto_recurring: {
             frequency: 1,
