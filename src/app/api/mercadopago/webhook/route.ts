@@ -1,14 +1,43 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { WebhookSignatureValidator } from "mercadopago";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const mercadoPagoToken = process.env.MERCADOPAGO_ACCESS_TOKEN!;
+const webhookSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET!;
 
 const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
 export async function POST(request: Request) {
   try {
+        const url = new URL(request.url);
+
+    const xSignature = request.headers.get("x-signature");
+    const xRequestId = request.headers.get("x-request-id");
+    const dataId = url.searchParams.get("data.id");
+
+    if (!xSignature || !xRequestId || !dataId) {
+      return NextResponse.json(
+        { ok: false, mensaje: "Firma de webhook incompleta" },
+        { status: 401 }
+      );
+    }
+
+    try {
+      WebhookSignatureValidator.validate({
+        xSignature,
+        xRequestId,
+        dataId,
+        secret: webhookSecret,
+      });
+    } catch {
+      return NextResponse.json(
+        { ok: false, mensaje: "Firma de webhook inválida" },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
 
     const subscriptionId =
@@ -86,5 +115,5 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-  
+
 }
