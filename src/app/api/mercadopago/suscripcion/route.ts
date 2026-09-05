@@ -2,9 +2,15 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/api-auth";
 import {
   getEmpresaForUser,
+  getMercadoPagoSubscription,
+  getSubscriptionPricingPhase,
   saveSubscriptionInEmpresa,
   type MercadoPagoSubscription,
 } from "@/lib/mercadopago-subscription";
+import {
+  getSubscriptionPlan,
+  isBillingPeriod,
+} from "@/lib/subscription-plans";
 
 export async function POST(request: Request) {
   const token = process.env.MERCADOPAGO_ACCESS_TOKEN;
@@ -29,13 +35,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json();
-    const requestedEmail =
-      typeof body?.email === "string" ? body.email.trim() : "";
-    const payerEmail =
-      process.env.MERCADOPAGO_TEST_PAYER_EMAIL?.trim() ||
-      requestedEmail ||
-      user.email;
+    const body = (await request.json()) as { period?: unknown };
+
+    if (!isBillingPeriod(body.period)) {
+      return NextResponse.json(
+        { ok: false, mensaje: "Período de suscripción inválido" },
+        { status: 400 }
+      );
+    }
+
+    const payerEmail = user.email;
 
     if (!payerEmail) {
       return NextResponse.json(
@@ -48,6 +57,48 @@ export async function POST(request: Request) {
     }
 
     const empresa = await getEmpresaForUser(user.id);
+    const pricing = await getSubscriptionPricingPhase();
+    const selectedPlan = getSubscriptionPlan(body.period, pricing.phase);
+
+    if (empresa.subscription_id) {
+      const currentSubscription = await getMercadoPagoSubscription(
+        empresa.subscription_id
+      );
+
+      if (currentSubscription.external_reference !== empresa.id) {
+        return NextResponse.json(
+          { ok: false, mensaje: "La suscripción guardada no es válida" },
+          { status: 409 }
+        );
+      }
+
+      if (currentSubscription.status === "pending" && currentSubscription.init_point) {
+        return NextResponse.json({
+          ok: true,
+          reused: true,
+          subscriptionId: currentSubscription.id,
+          initPoint: currentSubscription.init_point,
+          status: currentSubscription.status,
+        });
+      }
+
+      if (["authorized", "paused"].includes(currentSubscription.status)) {
+        return NextResponse.json(
+          {
+            ok: false,
+            mensaje:
+              currentSubscription.status === "authorized"
+                ? "La empresa ya tiene una suscripción activa"
+                : "La empresa tiene una suscripción pausada que debe reactivar",
+          },
+          { status: 409 }
+        );
+      }
+    }
+
+    const appUrl = (
+      process.env.NEXT_PUBLIC_APP_URL?.trim() || new URL(request.url).origin
+    ).replace(/\/$/, "");
 
     const respuesta = await fetch(
       "https://api.mercadopago.com/preapproval",
@@ -58,19 +109,18 @@ export async function POST(request: Request) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          reason: "PresupuestoIA Pro - Prueba",
+          reason: `PresupuestoIA Pro - ${selectedPlan.label}`,
           payer_email: payerEmail,
           external_reference: empresa.id,
 
           auto_recurring: {
-            frequency: 1,
+            frequency: selectedPlan.months,
             frequency_type: "months",
-            transaction_amount: 100,
+            transaction_amount: selectedPlan.price,
             currency_id: "ARS",
           },
 
-          back_url:
-            "https://presupuesto-ia-cyan.vercel.app/dashboard/pro/pago",
+          back_url: `${appUrl}/dashboard/pro/pago?period=${selectedPlan.id}`,
 
           status: "pending",
         }),
@@ -88,7 +138,7 @@ export async function POST(request: Request) {
         {
           ok: false,
           mensaje: "No se pudo crear la suscripción",
-          error: data,
+          detalle: data.message ?? "Error desconocido",
         },
         { status: respuesta.status }
       );
@@ -110,6 +160,10 @@ export async function POST(request: Request) {
       status: data.status,
       applicationId: data.application_id,
       collectorId: data.collector_id,
+      period: selectedPlan.id,
+      amount: selectedPlan.price,
+      currency: "ARS",
+      pricingPhase: pricing.phase,
     });
   } catch (error) {
     console.error("Error creando suscripción:", error);

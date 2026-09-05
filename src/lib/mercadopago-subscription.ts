@@ -1,4 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
+import {
+  FOUNDER_CUSTOMER_LIMIT,
+  type PricingPhase,
+} from "@/lib/subscription-plans";
 
 export type MercadoPagoSubscription = {
   id: string;
@@ -165,4 +169,34 @@ export async function getEmpresaForUser(userId: string) {
   }
 
   return data as { id: string; subscription_id: string | null };
+}
+
+export async function getSubscriptionPricingPhase(): Promise<{
+  phase: PricingPhase;
+  subscribedCompanies: number;
+  founderRemaining: number;
+}> {
+  const { count, error } = await getSupabaseAdmin()
+    .from("empresa")
+    .select("id", { count: "exact", head: true })
+    .not("subscription_id", "is", null)
+    .neq("subscription_status", "pending");
+
+  if (error) {
+    throw new Error(
+      `Supabase no pudo calcular el precio vigente: ${error.message}`
+    );
+  }
+
+  const subscribedCompanies = count ?? 0;
+  const founderRemaining = Math.max(
+    FOUNDER_CUSTOMER_LIMIT - subscribedCompanies,
+    0
+  );
+
+  return {
+    phase: founderRemaining > 0 ? "founder" : "standard",
+    subscribedCompanies,
+    founderRemaining,
+  };
 }

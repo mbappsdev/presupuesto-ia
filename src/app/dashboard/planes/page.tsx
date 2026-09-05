@@ -5,41 +5,53 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Navbar from "@/components/Navbar";
 import { syncMercadoPagoSubscription } from "@/lib/sync-subscription";
+import {
+  fetchSubscriptionPricing,
+  formatArs,
+} from "@/lib/subscription-pricing-client";
 
 export default function PlanesPage() {
   const router = useRouter();
 
   const [plan, setPlan] = useState<"free" | "pro">("free");
+  const [monthlyPrice, setMonthlyPrice] = useState<number | null>(null);
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
-    cargarPlan();
-  }, []);
+    async function cargarPlan() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-  async function cargarPlan() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/login");
+        return;
+      }
 
-    if (!user) {
-      router.push("/login");
-      return;
+      await syncMercadoPagoSubscription();
+
+      const { data, error } = await supabase
+        .from("empresa")
+        .select("plan")
+        .eq("user_id", user.id)
+        .single();
+
+      if (!error && data) {
+        setPlan(data.plan === "pro" ? "pro" : "free");
+      }
+
+      try {
+        const pricing = await fetchSubscriptionPricing();
+        setMonthlyPrice(pricing.plans[0]?.price ?? null);
+      } catch {
+        setMonthlyPrice(null);
+      }
+
+      setCargando(false);
     }
 
-    await syncMercadoPagoSubscription();
-
-    const { data, error } = await supabase
-      .from("empresa")
-      .select("plan")
-      .eq("user_id", user.id)
-      .single();
-
-    if (!error && data) {
-      setPlan(data.plan === "pro" ? "pro" : "free");
-    }
-
-    setCargando(false);
-  }
+    void cargarPlan();
+  }, [router]);
 
   if (cargando) {
     return (
@@ -132,22 +144,20 @@ export default function PlanesPage() {
               </h2>
 
               <p className="text-3xl font-bold mt-3">
-                Próximamente
+                {monthlyPrice ? `Desde ${formatArs(monthlyPrice)}` : "Ver precios"}
               </p>
 
               <p className="text-slate-500">
-                Para negocios que necesitan más
+                Frecuencias mensual, trimestral, semestral y anual
               </p>
 
             </div>
 
             <div className="mt-5 space-y-3">
 
-              <p>✅ Presupuestos ilimitados</p>
+              <p>✅ Presupuestos sin límites diarios</p>
 
               <p>✅ Sin límite diario</p>
-
-              <p>✅ Sin límite mensual</p>
 
               <p>✅ Todas las monedas</p>
 
@@ -164,7 +174,7 @@ export default function PlanesPage() {
               onClick={() => router.push("/dashboard/pro")}
               className="mt-5 w-full bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700"
             >
-              Plan Pro
+              {plan === "pro" ? "Plan actual" : "Ver precios Pro"}
             </button>
 
           </div>
