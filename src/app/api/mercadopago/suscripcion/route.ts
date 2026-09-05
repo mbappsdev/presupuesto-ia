@@ -1,4 +1,10 @@
 import { NextResponse } from "next/server";
+import { getAuthenticatedUser } from "@/lib/api-auth";
+import {
+  getEmpresaForUser,
+  saveSubscriptionInEmpresa,
+  type MercadoPagoSubscription,
+} from "@/lib/mercadopago-subscription";
 
 export async function POST(request: Request) {
   const token = process.env.MERCADOPAGO_ACCESS_TOKEN;
@@ -14,19 +20,34 @@ export async function POST(request: Request) {
   }
 
   try {
+    const user = await getAuthenticatedUser(request);
+
+    if (!user) {
+      return NextResponse.json(
+        { ok: false, mensaje: "Sesión inválida o vencida" },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
+    const requestedEmail =
+      typeof body?.email === "string" ? body.email.trim() : "";
+    const payerEmail =
+      process.env.MERCADOPAGO_TEST_PAYER_EMAIL?.trim() ||
+      requestedEmail ||
+      user.email;
 
-    const { email, externalReference } = body;
-
-    if (!email || !externalReference) {
+    if (!payerEmail) {
       return NextResponse.json(
         {
           ok: false,
-          mensaje: "Faltan email o externalReference",
+          mensaje: "No se pudo determinar el email del pagador",
         },
         { status: 400 }
       );
     }
+
+    const empresa = await getEmpresaForUser(user.id);
 
     const respuesta = await fetch(
       "https://api.mercadopago.com/preapproval",
@@ -38,11 +59,8 @@ export async function POST(request: Request) {
         },
         body: JSON.stringify({
           reason: "PresupuestoIA Pro - Prueba",
-          payer_email: email,
-          external_reference: externalReference,
-          
-          notification_url:
-           "https://presupuesto-ia-cyan.vercel.app/api/mercadopago/webhook",
+          payer_email: payerEmail,
+          external_reference: empresa.id,
 
           auto_recurring: {
             frequency: 1,
@@ -59,7 +77,9 @@ export async function POST(request: Request) {
       }
     );
 
-    const data = await respuesta.json();
+    const data = (await respuesta.json()) as MercadoPagoSubscription & {
+      message?: string;
+    };
 
     if (!respuesta.ok) {
       console.error("Error Mercado Pago:", data);
@@ -74,11 +94,22 @@ export async function POST(request: Request) {
       );
     }
 
+    await saveSubscriptionInEmpresa(empresa.id, data);
+
+    console.info("[mercadopago] Suscripción creada", {
+      subscriptionId: data.id,
+      applicationId: data.application_id,
+      collectorId: data.collector_id,
+      status: data.status,
+    });
+
     return NextResponse.json({
       ok: true,
       subscriptionId: data.id,
       initPoint: data.init_point,
       status: data.status,
+      applicationId: data.application_id,
+      collectorId: data.collector_id,
     });
   } catch (error) {
     console.error("Error creando suscripción:", error);

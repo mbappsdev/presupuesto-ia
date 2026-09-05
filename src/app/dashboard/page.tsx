@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import Navbar from "@/components/Navbar";
 import { generarPDF } from "@/utils/pdf";
 import { formatearMoneda } from "@/utils/moneda";
+import { syncMercadoPagoSubscription } from "@/lib/sync-subscription";
 
 type Empresa = {
   nombre: string;
@@ -44,6 +45,8 @@ export default function DashboardPage() {
       router.push("/login");
       return;
     }
+
+    await syncMercadoPagoSubscription();
 
     // Cargar presupuestos
     const { data: presupuestosData, error: presupuestosError } =

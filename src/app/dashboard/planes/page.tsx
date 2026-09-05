@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Navbar from "@/components/Navbar";
+import { syncMercadoPagoSubscription } from "@/lib/sync-subscription";
 
 export default function PlanesPage() {
   const router = useRouter();
@@ -24,6 +25,8 @@ export default function PlanesPage() {
       router.push("/login");
       return;
     }
+
+    await syncMercadoPagoSubscription();
 
     const { data, error } = await supabase
       .from("empresa")

@@ -1,21 +1,37 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { WebhookSignatureValidator } from "mercadopago";
+import {
+  getMercadoPagoSubscription,
+  saveSubscriptionInEmpresa,
+} from "@/lib/mercadopago-subscription";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const mercadoPagoToken = process.env.MERCADOPAGO_ACCESS_TOKEN!;
-const webhookSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET!;
+export const runtime = "nodejs";
 
-const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+export async function GET() {
+  return NextResponse.json({
+    ok: true,
+    servicio: "mercadopago-webhook",
+    configurado: Boolean(
+      process.env.MERCADOPAGO_ACCESS_TOKEN &&
+        process.env.MERCADOPAGO_WEBHOOK_SECRET &&
+        process.env.NEXT_PUBLIC_SUPABASE_URL &&
+        process.env.SUPABASE_SERVICE_ROLE_KEY
+    ),
+  });
+}
 
 export async function POST(request: Request) {
   try {
-        const url = new URL(request.url);
-
+    const webhookSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
+    const url = new URL(request.url);
     const xSignature = request.headers.get("x-signature");
     const xRequestId = request.headers.get("x-request-id");
     const dataId = url.searchParams.get("data.id");
+
+    if (!webhookSecret) {
+      console.error("[mercadopago] MERCADOPAGO_WEBHOOK_SECRET no configurado");
+      return NextResponse.json({ ok: false }, { status: 500 });
+    }
 
     if (!xSignature || !xRequestId || !dataId) {
       return NextResponse.json(
@@ -32,104 +48,50 @@ export async function POST(request: Request) {
         secret: webhookSecret,
       });
     } catch {
+      console.warn("[mercadopago] Firma inválida", { xRequestId, dataId });
       return NextResponse.json(
         { ok: false, mensaje: "Firma de webhook inválida" },
         { status: 401 }
       );
     }
 
-    const body = await request.json();
+    const body = (await request.json()) as {
+      type?: string;
+      action?: string;
+      data?: { id?: string };
+    };
+    const topic = url.searchParams.get("type") ?? body.type;
 
-    const subscriptionId =
-      body?.data?.id ||
-      body?.id ||
-      null;
+    console.info("[mercadopago] Webhook válido recibido", {
+      topic,
+      action: body.action,
+      dataId,
+      xRequestId,
+    });
 
-    if (!subscriptionId) {
-      return NextResponse.json({ ok: true });
+    // Los IDs de payment y authorized_payment no son IDs de preapproval.
+    // Se confirman para evitar reintentos; el estado de la suscripción se
+    // procesa exclusivamente con subscription_preapproval.
+    if (topic !== "subscription_preapproval") {
+      return NextResponse.json({ ok: true, ignored: true });
     }
 
-    const respuesta = await fetch(
-      `https://api.mercadopago.com/preapproval/${subscriptionId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${mercadoPagoToken}`,
-        },
-      }
-    );
-
-    const suscripcion = await respuesta.json();
-
-    if (!respuesta.ok) {
-      console.error("Error consultando suscripción:", suscripcion);
-
-      return NextResponse.json(
-        { ok: false },
-        { status: 500 }
-      );
-    }
-
-    const empresaId = suscripcion.external_reference;
+    const subscription = await getMercadoPagoSubscription(dataId);
+    const empresaId = subscription.external_reference;
 
     if (!empresaId) {
-      return NextResponse.json({ ok: true });
+      console.warn("[mercadopago] Suscripción sin external_reference", {
+        subscriptionId: subscription.id,
+      });
+      return NextResponse.json({ ok: true, ignored: true });
     }
 
-    const ahora = new Date();
-
-    const fechaFin = suscripcion.next_payment_date
-      ? new Date(suscripcion.next_payment_date)
-      : null;
-
-    let plan = "free";
-    let subscriptionStatus = suscripcion.status;
-
-    if (suscripcion.status === "authorized") {
-      plan = "pro";
-      subscriptionStatus = "active";
-    }
-
-    if (suscripcion.status === "paused") {
-      subscriptionStatus = "paused";
-
-      if (fechaFin && fechaFin > ahora) {
-        plan = "pro";
-      }
-    }
-
-    const { error } = await supabaseAdmin
-      .from("empresa")
-      .update({
-        plan,
-        subscription_status: subscriptionStatus,
-        subscription_started_at:
-          suscripcion.date_created ?? new Date().toISOString(),
-        subscription_expires_at:
-          suscripcion.next_payment_date ?? null,
-        subscription_provider: "mercadopago",
-        subscription_id: suscripcion.id,
-        subscription_external_reference:
-          suscripcion.external_reference,
-      })
-      .eq("id", empresaId);
-
-    if (error) {
-      console.error("Error actualizando empresa:", error);
-
-      return NextResponse.json(
-        { ok: false },
-        { status: 500 }
-      );
-    }
+    await saveSubscriptionInEmpresa(empresaId, subscription);
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("Error webhook Mercado Pago:", error);
+    console.error("[mercadopago] Error procesando webhook", error);
 
-    return NextResponse.json(
-      { ok: false },
-      { status: 500 }
-    );
+    return NextResponse.json({ ok: false }, { status: 500 });
   }
-
 }

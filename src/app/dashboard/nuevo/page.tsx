@@ -3,6 +3,7 @@ import { useState, useEffect, type FormEvent } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
+import { syncMercadoPagoSubscription } from "@/lib/sync-subscription";
 
 
 export default function NuevoPresupuestoPage() {
@@ -48,6 +49,8 @@ async function cargarDatos() {
     router.push("/login");
     return;
   }
+
+  await syncMercadoPagoSubscription();
 
   // Obtener plan
  const { data: empresaData } = await supabase

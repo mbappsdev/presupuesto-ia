@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { supabase } from "@/lib/supabase";
@@ -10,6 +10,51 @@ export default function PagoProPage() {
 
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const regresoDeMercadoPago =
+      params.has("preapproval_id") ||
+      params.has("status") ||
+      params.has("external_reference");
+
+    if (!regresoDeMercadoPago) return;
+
+    async function sincronizarSuscripcion() {
+      setCargando(true);
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        setError("Tu sesión venció. Iniciá sesión nuevamente.");
+        setCargando(false);
+        return;
+      }
+
+      const response = await fetch("/api/mercadopago/suscripcion/sync", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+      const data = await response.json();
+
+      if (response.ok && data.ok) {
+        router.replace("/dashboard/planes");
+        router.refresh();
+        return;
+      }
+
+      setError(
+        data.mensaje ?? "No pudimos confirmar todavía el estado del pago."
+      );
+      setCargando(false);
+    }
+
+    void sincronizarSuscripcion();
+  }, [router]);
 
   async function iniciarSuscripcion() {
     try {
@@ -24,6 +69,15 @@ export default function PagoProPage() {
 
       if (userError || !user) {
         setError("No se pudo identificar tu usuario.");
+        return;
+      }
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        setError("Tu sesión venció. Iniciá sesión nuevamente.");
         return;
       }
 
@@ -45,10 +99,10 @@ export default function PagoProPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           email: "test_user_1051359909508570515@testuser.com",
-          externalReference: empresa.id,
         }),
       });
 
