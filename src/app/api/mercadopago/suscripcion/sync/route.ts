@@ -19,9 +19,19 @@ export async function POST(request: Request) {
     }
 
     const empresa = await getEmpresaForUser(user.id);
+    const rawBody = await request.text();
+    const body = rawBody
+      ? (JSON.parse(rawBody) as { subscriptionId?: unknown })
+      : {};
+    const requestedSubscriptionId =
+      typeof body.subscriptionId === "string" &&
+      /^[a-zA-Z0-9_-]{1,100}$/.test(body.subscriptionId)
+        ? body.subscriptionId
+        : null;
 
-    const subscription = empresa.subscription_id
-      ? await getMercadoPagoSubscription(empresa.subscription_id)
+    const subscriptionId = requestedSubscriptionId ?? empresa.subscription_id;
+    const subscription = subscriptionId
+      ? await getMercadoPagoSubscription(subscriptionId)
       : await findMercadoPagoSubscription(empresa.id);
 
     if (!subscription) {

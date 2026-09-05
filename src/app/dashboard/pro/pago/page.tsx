@@ -36,8 +36,12 @@ export default function PagoProPage() {
       const response = await fetch("/api/mercadopago/suscripcion/sync", {
         method: "POST",
         headers: {
+          "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
         },
+        body: JSON.stringify({
+          subscriptionId: params.get("preapproval_id"),
+        }),
       });
       const data = await response.json();
 
