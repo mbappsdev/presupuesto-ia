@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/api-auth";
 import {
+  findMercadoPagoSubscription,
   getEmpresaForUser,
   getMercadoPagoSubscription,
   saveSubscriptionInEmpresa,
@@ -19,16 +20,16 @@ export async function POST(request: Request) {
 
     const empresa = await getEmpresaForUser(user.id);
 
-    if (!empresa.subscription_id) {
+    const subscription = empresa.subscription_id
+      ? await getMercadoPagoSubscription(empresa.subscription_id)
+      : await findMercadoPagoSubscription(empresa.id);
+
+    if (!subscription) {
       return NextResponse.json(
         { ok: false, mensaje: "La empresa todavía no tiene una suscripción" },
         { status: 404 }
       );
     }
-
-    const subscription = await getMercadoPagoSubscription(
-      empresa.subscription_id
-    );
 
     if (subscription.external_reference !== empresa.id) {
       return NextResponse.json(

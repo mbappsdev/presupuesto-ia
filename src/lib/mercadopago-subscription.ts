@@ -63,6 +63,45 @@ export async function getMercadoPagoSubscription(subscriptionId: string) {
   return data;
 }
 
+export async function findMercadoPagoSubscription(empresaId: string) {
+  const search = new URL("https://api.mercadopago.com/preapproval/search");
+  search.searchParams.set("q", empresaId);
+  search.searchParams.set("limit", "100");
+
+  const response = await fetch(search, {
+    headers: {
+      Authorization: `Bearer ${getMercadoPagoToken()}`,
+    },
+    cache: "no-store",
+  });
+
+  const data = (await response.json()) as {
+    results?: MercadoPagoSubscription[];
+    message?: string;
+  };
+
+  if (!response.ok) {
+    throw new Error(
+      `Mercado Pago no pudo buscar la suscripción (${response.status}): ${
+        data.message ?? "error desconocido"
+      }`
+    );
+  }
+
+  return (data.results ?? [])
+    .filter((subscription) => subscription.external_reference === empresaId)
+    .sort((a, b) => {
+      const aCreatedAt = a.date_created
+        ? new Date(a.date_created).getTime()
+        : 0;
+      const bCreatedAt = b.date_created
+        ? new Date(b.date_created).getTime()
+        : 0;
+
+      return bCreatedAt - aCreatedAt;
+    })[0] ?? null;
+}
+
 export async function saveSubscriptionInEmpresa(
   empresaId: string,
   subscription: MercadoPagoSubscription
