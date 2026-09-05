@@ -106,6 +106,59 @@ export async function findMercadoPagoSubscription(empresaId: string) {
     })[0] ?? null;
 }
 
+async function ensureFounderStatus(empresaId: string) {
+  const supabaseAdmin = getSupabaseAdmin();
+
+  const { data: empresa, error: empresaError } = await supabaseAdmin
+    .from("empresa")
+    .select("id, is_founder, founder_started_at, founder_price_until")
+    .eq("id", empresaId)
+    .single();
+
+  if (empresaError || !empresa) {
+    throw new Error("No se pudo consultar el estado fundador de la empresa");
+  }
+
+  if (empresa.is_founder) {
+    return;
+  }
+
+  const { count, error: countError } = await supabaseAdmin
+    .from("empresa")
+    .select("id", { count: "exact", head: true })
+    .eq("is_founder", true);
+
+  if (countError) {
+    throw new Error(
+      `Supabase no pudo contar los clientes fundadores: ${countError.message}`
+    );
+  }
+
+  if ((count ?? 0) >= FOUNDER_CUSTOMER_LIMIT) {
+    return;
+  }
+
+  const founderStartedAt = new Date();
+  const founderPriceUntil = new Date(founderStartedAt);
+  founderPriceUntil.setFullYear(founderPriceUntil.getFullYear() + 1);
+
+  const { error: updateError } = await supabaseAdmin
+    .from("empresa")
+    .update({
+      is_founder: true,
+      founder_started_at: founderStartedAt.toISOString(),
+      founder_price_until: founderPriceUntil.toISOString(),
+    })
+    .eq("id", empresaId)
+    .eq("is_founder", false);
+
+  if (updateError) {
+    throw new Error(
+      `Supabase no pudo asignar el beneficio fundador: ${updateError.message}`
+    );
+  }
+}
+
 export async function saveSubscriptionInEmpresa(
   empresaId: string,
   subscription: MercadoPagoSubscription
@@ -154,6 +207,10 @@ export async function saveSubscriptionInEmpresa(
     throw new Error("La empresa indicada por Mercado Pago no existe");
   }
 
+  if (subscription.status === "authorized") {
+    await ensureFounderStatus(empresaId);
+  }
+
   return { plan, subscriptionStatus };
 }
 
@@ -179,8 +236,7 @@ export async function getSubscriptionPricingPhase(): Promise<{
   const { count, error } = await getSupabaseAdmin()
     .from("empresa")
     .select("id", { count: "exact", head: true })
-    .not("subscription_id", "is", null)
-    .neq("subscription_status", "pending");
+    .eq("is_founder", true);
 
   if (error) {
     throw new Error(
