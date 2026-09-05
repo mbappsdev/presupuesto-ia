@@ -82,11 +82,51 @@ export default function DashboardPage() {
     console.log("Error empresa:", empresaError);
 
     if (!empresaError && empresaData) {
-      setEmpresa(empresaData);
-      setPlan(empresaData?.plan === "pro" ? "pro" : "free");
-      setSubscriptionStatus(empresaData.subscription_status);
-      setSubscriptionExpiresAt(empresaData.subscription_expires_at);
+    let planActual: "free" | "pro" =
+     empresaData?.plan === "pro" ? "pro" : "free";
+    let estadoActual = empresaData.subscription_status;
+
+    const fechaVencimiento = empresaData.subscription_expires_at
+      ? new Date(empresaData.subscription_expires_at)
+      : null;
+
+    const ahora = new Date();
+
+    const suscripcionVencida =
+      estadoActual === "paused" &&
+      fechaVencimiento &&
+      fechaVencimiento <= ahora;
+
+    if (suscripcionVencida) {
+      planActual = "free";
+      estadoActual = "expired";
+
+      const { error: vencimientoError } = await supabase
+        .from("empresa")
+        .update({
+          plan: "free",
+          subscription_status: "expired",
+        })
+        .eq("id", empresaData.id);
+
+      if (vencimientoError) {
+        console.error(
+          "Error actualizando suscripción vencida:",
+          vencimientoError
+        );
+      }
     }
+
+    setEmpresa({
+      ...empresaData,
+      plan: planActual,
+      subscription_status: estadoActual,
+    });
+
+    setPlan(planActual);
+    setSubscriptionStatus(estadoActual);
+    setSubscriptionExpiresAt(empresaData.subscription_expires_at);
+  }
     setCargandoPlan(false);
   }
 
