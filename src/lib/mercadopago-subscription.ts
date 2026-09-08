@@ -4,6 +4,8 @@ import {
   type PricingPhase,
 } from "@/lib/subscription-plans";
 
+const FOUNDER_LAUNCH_AT = new Date("2026-09-08T00:00:00.000Z");
+
 export type MercadoPagoSubscription = {
   id: string;
   status: string;
@@ -106,7 +108,23 @@ export async function findMercadoPagoSubscription(empresaId: string) {
     })[0] ?? null;
 }
 
-async function ensureFounderStatus(empresaId: string) {
+async function ensureFounderStatus(
+  empresaId: string,
+  subscriptionCreatedAt?: string | null
+) {
+  if (!subscriptionCreatedAt) {
+    return;
+  }
+
+  const createdAt = new Date(subscriptionCreatedAt);
+
+  if (
+    Number.isNaN(createdAt.getTime()) ||
+    createdAt.getTime() < FOUNDER_LAUNCH_AT.getTime()
+  ) {
+    return;
+  }
+
   const supabaseAdmin = getSupabaseAdmin();
 
   const { data: empresa, error: empresaError } = await supabaseAdmin
@@ -208,7 +226,7 @@ export async function saveSubscriptionInEmpresa(
   }
 
   if (subscription.status === "authorized") {
-    await ensureFounderStatus(empresaId);
+    await ensureFounderStatus(empresaId, subscription.date_created);
   }
 
   return { plan, subscriptionStatus };
