@@ -181,10 +181,23 @@ export async function saveSubscriptionInEmpresa(
   empresaId: string,
   subscription: MercadoPagoSubscription
 ) {
+  const supabaseAdmin = getSupabaseAdmin();
   const now = new Date();
-  const expiresAt = subscription.next_payment_date
-    ? new Date(subscription.next_payment_date)
-    : null;
+
+  const { data: existingEmpresa, error: existingEmpresaError } =
+    await supabaseAdmin
+      .from("empresa")
+      .select("subscription_expires_at")
+      .eq("id", empresaId)
+      .single();
+
+  if (existingEmpresaError || !existingEmpresa) {
+    throw new Error("No se pudo consultar la empresa antes de actualizar la suscripción");
+  }
+
+  const effectiveExpiresAt =
+    subscription.next_payment_date ?? existingEmpresa.subscription_expires_at ?? null;
+  const expiresAt = effectiveExpiresAt ? new Date(effectiveExpiresAt) : null;
 
   let plan = "free";
   let subscriptionStatus = subscription.status;
@@ -192,22 +205,27 @@ export async function saveSubscriptionInEmpresa(
   if (subscription.status === "authorized") {
     plan = "pro";
     subscriptionStatus = "active";
-  } else if (subscription.status === "paused") {
-    subscriptionStatus = "paused";
+  } else if (
+    subscription.status === "paused" ||
+    subscription.status === "cancelled" ||
+    subscription.status === "canceled"
+  ) {
+    subscriptionStatus =
+      subscription.status === "canceled" ? "cancelled" : subscription.status;
 
     if (expiresAt && expiresAt > now) {
       plan = "pro";
     }
   }
 
-  const { data, error } = await getSupabaseAdmin()
+  const { data, error } = await supabaseAdmin
     .from("empresa")
     .update({
       plan,
       subscription_status: subscriptionStatus,
       subscription_started_at:
         subscription.date_created ?? new Date().toISOString(),
-      subscription_expires_at: subscription.next_payment_date ?? null,
+      subscription_expires_at: effectiveExpiresAt,
       subscription_provider: "mercadopago",
       subscription_id: subscription.id,
       subscription_external_reference:
