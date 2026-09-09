@@ -27,10 +27,9 @@ export default function DashboardPage() {
   const [cargandoPlan, setCargandoPlan] = useState(true);
   const [presupuestosHoy, setPresupuestosHoy] = useState(0);
   const [subscriptionStatus, setSubscriptionStatus] =
-  useState<string | null>(null);
+    useState<string | null>(null);
   const [subscriptionExpiresAt, setSubscriptionExpiresAt] =
-  useState<string | null>(null);
-  
+    useState<string | null>(null);
 
   useEffect(() => {
     cargarDatos();
@@ -48,7 +47,6 @@ export default function DashboardPage() {
 
     await syncMercadoPagoSubscription();
 
-    // Cargar presupuestos
     const { data: presupuestosData, error: presupuestosError } =
       await supabase
         .from("presupuestos")
@@ -74,7 +72,6 @@ export default function DashboardPage() {
 
     setPresupuestosHoy(cantidadHoy);
 
-    // Cargar datos de la empresa
     const { data: empresaData, error: empresaError } = await supabase
       .from("empresa")
       .select("*")
@@ -85,51 +82,59 @@ export default function DashboardPage() {
     console.log("Error empresa:", empresaError);
 
     if (!empresaError && empresaData) {
-    let planActual: "free" | "pro" =
-     empresaData?.plan === "pro" ? "pro" : "free";
-    let estadoActual = empresaData.subscription_status;
+      let planActual: "free" | "pro" =
+        empresaData?.plan === "pro" ? "pro" : "free";
+      let estadoActual = empresaData.subscription_status;
 
-    const fechaVencimiento = empresaData.subscription_expires_at
-      ? new Date(empresaData.subscription_expires_at)
-      : null;
+      const fechaVencimiento = empresaData.subscription_expires_at
+        ? new Date(empresaData.subscription_expires_at)
+        : null;
 
-    const ahora = new Date();
+      const ahora = new Date();
+      const estadoSinRenovacion =
+        estadoActual === "paused" || estadoActual === "cancelled";
+      const tieneAccesoPagadoVigente =
+        Boolean(fechaVencimiento && fechaVencimiento > ahora);
 
-    const suscripcionVencida =
-      estadoActual === "paused" &&
-      fechaVencimiento &&
-      fechaVencimiento <= ahora;
-
-    if (suscripcionVencida) {
-      planActual = "free";
-      estadoActual = "expired";
-
-      const { error: vencimientoError } = await supabase
-        .from("empresa")
-        .update({
-          plan: "free",
-          subscription_status: "expired",
-        })
-        .eq("id", empresaData.id);
-
-      if (vencimientoError) {
-        console.error(
-          "Error actualizando suscripción vencida:",
-          vencimientoError
-        );
+      if (estadoSinRenovacion && tieneAccesoPagadoVigente) {
+        planActual = "pro";
       }
+
+      const suscripcionVencida =
+        estadoSinRenovacion &&
+        fechaVencimiento &&
+        fechaVencimiento <= ahora;
+
+      if (suscripcionVencida) {
+        planActual = "free";
+        estadoActual = "expired";
+
+        const { error: vencimientoError } = await supabase
+          .from("empresa")
+          .update({
+            plan: "free",
+            subscription_status: "expired",
+          })
+          .eq("id", empresaData.id);
+
+        if (vencimientoError) {
+          console.error(
+            "Error actualizando suscripción vencida:",
+            vencimientoError
+          );
+        }
+      }
+
+      setEmpresa({
+        ...empresaData,
+        plan: planActual,
+        subscription_status: estadoActual,
+      });
+
+      setPlan(planActual);
+      setSubscriptionStatus(estadoActual);
+      setSubscriptionExpiresAt(empresaData.subscription_expires_at);
     }
-
-    setEmpresa({
-      ...empresaData,
-      plan: planActual,
-      subscription_status: estadoActual,
-    });
-
-    setPlan(planActual);
-    setSubscriptionStatus(estadoActual);
-    setSubscriptionExpiresAt(empresaData.subscription_expires_at);
-  }
     setCargandoPlan(false);
   }
 
@@ -163,14 +168,17 @@ export default function DashboardPage() {
   }
 
   const suscripcionVencida =
-  subscriptionExpiresAt &&
-  new Date(subscriptionExpiresAt) < new Date();
+    Boolean(
+      subscriptionExpiresAt &&
+        new Date(subscriptionExpiresAt) <= new Date()
+    );
 
   const esProActivo =
-  plan === "pro" &&
-  (subscriptionStatus === "active" ||
-    subscriptionStatus === "cancelled") &&
-  !suscripcionVencida;
+    plan === "pro" &&
+    (subscriptionStatus === "active" ||
+      subscriptionStatus === "paused" ||
+      subscriptionStatus === "cancelled") &&
+    !suscripcionVencida;
 
   return (
     <>
@@ -198,30 +206,35 @@ export default function DashboardPage() {
                   <div className="mt-2 text-green-700 font-medium">
                     🟢 Suscripción activa
                   </div>
-              )}
+                )}
+
+              {plan === "pro" &&
+                subscriptionStatus === "paused" &&
+                !suscripcionVencida && (
+                  <div className="mt-2 text-amber-700 font-medium">
+                    ⏸️ Suscripción pausada · mantenés Pro hasta el vencimiento
+                  </div>
+                )}
 
               {plan === "pro" &&
                 subscriptionStatus === "cancelled" &&
                 !suscripcionVencida && (
                   <div className="mt-2 text-orange-700 font-medium">
-                    🟠 Suscripción cancelada
+                    🟠 Suscripción cancelada · mantenés Pro hasta el vencimiento
                   </div>
-              )}      
+                )}
 
-              {plan === "pro" &&
-                  suscripcionVencida && (
-                  <div className="mt-2 text-red-700 font-medium">
-                    🔴 Suscripción vencida
-                  </div>
-              )}    
+              {suscripcionVencida && (
+                <div className="mt-2 text-red-700 font-medium">
+                  🔴 Tu acceso Pro finalizó · ahora estás en el plan Gratis
+                </div>
+              )}
 
-              {plan === "pro" &&
-                subscriptionExpiresAt &&
-                !suscripcionVencida && (
-                  <div className="mt-1 text-slate-600">
-                    📅 Acceso Pro hasta:{" "}
-                    {new Date(subscriptionExpiresAt).toLocaleDateString("es-AR")}
-                  </div>
+              {esProActivo && subscriptionExpiresAt && (
+                <div className="mt-1 text-slate-600">
+                  📅 Acceso Pro hasta:{" "}
+                  {new Date(subscriptionExpiresAt).toLocaleDateString("es-AR")}
+                </div>
               )}
 
               {!esProActivo && (
@@ -253,9 +266,7 @@ export default function DashboardPage() {
                 key={p.id}
                 className="border rounded-xl p-4 mb-4 bg-white shadow"
               >
-                <h3 className="font-bold text-lg">
-                  {p.cliente}
-                </h3>
+                <h3 className="font-bold text-lg">{p.cliente}</h3>
 
                 <p>{p.empresa}</p>
 
@@ -295,6 +306,5 @@ export default function DashboardPage() {
         </div>
       </main>
     </>
-    
   );
 }
