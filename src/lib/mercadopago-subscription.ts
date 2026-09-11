@@ -1,6 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import {
   FOUNDER_CUSTOMER_LIMIT,
+  getBillingPeriodFromMonths,
+  getFounderLoyaltyPrice,
   type PricingPhase,
 } from "@/lib/subscription-plans";
 
@@ -15,6 +17,12 @@ export type MercadoPagoSubscription = {
   application_id?: number | null;
   collector_id?: number | null;
   init_point?: string | null;
+  auto_recurring?: {
+    frequency?: number | null;
+    frequency_type?: string | null;
+    transaction_amount?: number | null;
+    currency_id?: string | null;
+  } | null;
 };
 
 function getMercadoPagoToken() {
@@ -248,6 +256,98 @@ export async function saveSubscriptionInEmpresa(
   }
 
   return { plan, subscriptionStatus };
+}
+
+export async function applyFounderLoyaltyPricing() {
+  const supabaseAdmin = getSupabaseAdmin();
+  const nowIso = new Date().toISOString();
+
+  const { data: empresas, error } = await supabaseAdmin
+    .from("empresa")
+    .select("id, subscription_id, founder_price_until")
+    .eq("is_founder", true)
+    .not("subscription_id", "is", null)
+    .not("founder_price_until", "is", null)
+    .lte("founder_price_until", nowIso);
+
+  if (error) {
+    throw new Error(
+      `Supabase no pudo consultar fundadores para actualizar precios: ${error.message}`
+    );
+  }
+
+  let checked = 0;
+  let updated = 0;
+  const failures: Array<{ empresaId: string; message: string }> = [];
+
+  for (const empresa of empresas ?? []) {
+    checked += 1;
+
+    try {
+      const subscription = await getMercadoPagoSubscription(empresa.subscription_id);
+
+      if (!["authorized", "paused"].includes(subscription.status)) {
+        continue;
+      }
+
+      const frequency = subscription.auto_recurring?.frequency;
+      const frequencyType = subscription.auto_recurring?.frequency_type;
+
+      if (!frequency || frequencyType !== "months") {
+        throw new Error("No se pudo determinar el período de facturación");
+      }
+
+      const period = getBillingPeriodFromMonths(frequency);
+
+      if (!period) {
+        throw new Error(`Frecuencia de facturación no reconocida: ${frequency} meses`);
+      }
+
+      const targetAmount = getFounderLoyaltyPrice(period);
+      const currentAmount = subscription.auto_recurring?.transaction_amount ?? null;
+
+      if (currentAmount === targetAmount) {
+        continue;
+      }
+
+      const response = await fetch(
+        `https://api.mercadopago.com/preapproval/${encodeURIComponent(subscription.id)}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${getMercadoPagoToken()}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            auto_recurring: {
+              transaction_amount: targetAmount,
+              currency_id: "ARS",
+            },
+          }),
+          cache: "no-store",
+        }
+      );
+
+      const responseData = (await response.json()) as { message?: string };
+
+      if (!response.ok) {
+        throw new Error(
+          `Mercado Pago rechazó el cambio de importe (${response.status}): ${
+            responseData.message ?? "error desconocido"
+          }`
+        );
+      }
+
+      updated += 1;
+    } catch (cause) {
+      failures.push({
+        empresaId: empresa.id,
+        message: cause instanceof Error ? cause.message : "Error desconocido",
+      });
+    }
+  }
+
+  return { checked, updated, failures };
 }
 
 export async function getEmpresaForUser(userId: string) {
