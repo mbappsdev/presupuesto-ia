@@ -26,6 +26,8 @@ export default function NuevoPresupuestoPage() {
   const [detalleIA, setDetalleIA] = useState("");
   const [generandoIA, setGenerandoIA] = useState(false);
   const [errorIA, setErrorIA] = useState("");
+  const [aiRemaining, setAiRemaining] = useState<number | null>(null);
+  const [aiDailyLimit, setAiDailyLimit] = useState(20);
 
   const suscripcionVencida =
     subscriptionExpiresAt !== null &&
@@ -41,6 +43,14 @@ export default function NuevoPresupuestoPage() {
   useEffect(() => {
     cargarDatos();
   }, []);
+
+  useEffect(() => {
+    if (esProActivo) {
+      cargarUsoIA();
+    } else {
+      setAiRemaining(null);
+    }
+  }, [esProActivo]);
 
   async function cargarDatos() {
     const {
@@ -94,11 +104,53 @@ export default function NuevoPresupuestoPage() {
     setPresupuestosMes(cantidadMes);
   }
 
+  async function cargarUsoIA() {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) return;
+
+      const response = await fetch("/api/ia/presupuesto", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        cache: "no-store",
+      });
+
+      if (!response.ok) return;
+
+      const data = (await response.json()) as {
+        dailyLimit?: number;
+        remaining?: number;
+      };
+
+      if (typeof data.dailyLimit === "number") {
+        setAiDailyLimit(data.dailyLimit);
+      }
+
+      if (typeof data.remaining === "number") {
+        setAiRemaining(data.remaining);
+      }
+    } catch (error) {
+      console.error("No se pudo cargar el uso de IA:", error);
+    }
+  }
+
   async function generarDescripcionIA() {
     setErrorIA("");
 
     if (!esProActivo) {
       router.push("/dashboard/planes");
+      return;
+    }
+
+    if (aiRemaining === 0) {
+      setErrorIA(
+        `Llegaste al límite de ${aiDailyLimit} generaciones con IA de hoy. Podés volver a usarla mañana.`
+      );
       return;
     }
 
@@ -131,7 +183,17 @@ export default function NuevoPresupuestoPage() {
         ok?: boolean;
         descripcion?: string;
         mensaje?: string;
+        dailyLimit?: number;
+        remaining?: number;
       };
+
+      if (typeof data.dailyLimit === "number") {
+        setAiDailyLimit(data.dailyLimit);
+      }
+
+      if (typeof data.remaining === "number") {
+        setAiRemaining(data.remaining);
+      }
 
       if (!response.ok || !data.descripcion) {
         throw new Error(data.mensaje || "No pudimos generar la descripción.");
@@ -272,6 +334,13 @@ export default function NuevoPresupuestoPage() {
                   Contanos brevemente qué vas a presupuestar y la IA redactará una
                   descripción profesional que después podés editar.
                 </p>
+                {esProActivo && (
+                  <p className="mt-2 text-xs font-medium text-violet-700">
+                    {aiRemaining === null
+                      ? `Hasta ${aiDailyLimit} generaciones por día.`
+                      : `Generaciones disponibles hoy: ${aiRemaining} / ${aiDailyLimit}`}
+                  </p>
+                )}
               </div>
               {!esProActivo && (
                 <span className="whitespace-nowrap rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">
@@ -296,14 +365,16 @@ export default function NuevoPresupuestoPage() {
                   <button
                     type="button"
                     onClick={generarDescripcionIA}
-                    disabled={generandoIA}
+                    disabled={generandoIA || aiRemaining === 0}
                     className="rounded-xl bg-violet-600 px-4 py-2 font-semibold text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-violet-300"
                   >
                     {generandoIA
                       ? "✨ Generando..."
-                      : descripcion
-                        ? "✨ Regenerar con IA"
-                        : "✨ Generar con IA"}
+                      : aiRemaining === 0
+                        ? "🔒 Límite diario alcanzado"
+                        : descripcion
+                          ? "✨ Regenerar con IA"
+                          : "✨ Generar con IA"}
                   </button>
                 </div>
                 {errorIA && (
