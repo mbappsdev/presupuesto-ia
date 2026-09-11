@@ -4,6 +4,8 @@ import { getAuthenticatedUser } from "@/lib/api-auth";
 
 export const runtime = "nodejs";
 
+const AI_DAILY_LIMIT = 20;
+
 function getSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -20,15 +22,92 @@ function getSupabaseAdmin() {
   });
 }
 
-export async function POST(request: Request) {
-  try {
-    const user = await getAuthenticatedUser(request);
+async function getProUserContext(request: Request) {
+  const user = await getAuthenticatedUser(request);
 
-    if (!user) {
-      return NextResponse.json(
+  if (!user) {
+    return {
+      error: NextResponse.json(
         { ok: false, mensaje: "Sesión inválida o vencida" },
         { status: 401 }
-      );
+      ),
+    } as const;
+  }
+
+  const supabaseAdmin = getSupabaseAdmin();
+  const { data: empresa, error: empresaError } = await supabaseAdmin
+    .from("empresa")
+    .select("plan, subscription_status, subscription_expires_at")
+    .eq("user_id", user.id)
+    .single();
+
+  if (empresaError || !empresa) {
+    return {
+      error: NextResponse.json(
+        { ok: false, mensaje: "No se encontró la empresa del usuario" },
+        { status: 404 }
+      ),
+    } as const;
+  }
+
+  const expiresAt = empresa.subscription_expires_at
+    ? new Date(empresa.subscription_expires_at)
+    : null;
+  const tieneAccesoVigente = !expiresAt || expiresAt > new Date();
+  const esPro = empresa.plan === "pro" && tieneAccesoVigente;
+
+  if (!esPro) {
+    return {
+      error: NextResponse.json(
+        { ok: false, mensaje: "Generar con IA es una función exclusiva del Plan Pro" },
+        { status: 403 }
+      ),
+    } as const;
+  }
+
+  return { user, supabaseAdmin } as const;
+}
+
+export async function GET(request: Request) {
+  try {
+    const context = await getProUserContext(request);
+
+    if ("error" in context) {
+      return context.error;
+    }
+
+    const { data, error } = await context.supabaseAdmin.rpc(
+      "get_ai_generation_remaining",
+      {
+        p_user_id: context.user.id,
+        p_limit: AI_DAILY_LIMIT,
+      }
+    );
+
+    if (error) {
+      throw new Error(`No se pudo consultar el límite de IA: ${error.message}`);
+    }
+
+    return NextResponse.json({
+      ok: true,
+      dailyLimit: AI_DAILY_LIMIT,
+      remaining: typeof data === "number" ? data : AI_DAILY_LIMIT,
+    });
+  } catch (error) {
+    console.error("Error consultando límite de IA:", error);
+    return NextResponse.json(
+      { ok: false, mensaje: "No pudimos consultar el uso diario de IA" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const context = await getProUserContext(request);
+
+    if ("error" in context) {
+      return context.error;
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -37,33 +116,6 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { ok: false, mensaje: "La función de IA todavía no está configurada" },
         { status: 503 }
-      );
-    }
-
-    const supabaseAdmin = getSupabaseAdmin();
-    const { data: empresa, error: empresaError } = await supabaseAdmin
-      .from("empresa")
-      .select("plan, subscription_status, subscription_expires_at")
-      .eq("user_id", user.id)
-      .single();
-
-    if (empresaError || !empresa) {
-      return NextResponse.json(
-        { ok: false, mensaje: "No se encontró la empresa del usuario" },
-        { status: 404 }
-      );
-    }
-
-    const expiresAt = empresa.subscription_expires_at
-      ? new Date(empresa.subscription_expires_at)
-      : null;
-    const tieneAccesoVigente = !expiresAt || expiresAt > new Date();
-    const esPro = empresa.plan === "pro" && tieneAccesoVigente;
-
-    if (!esPro) {
-      return NextResponse.json(
-        { ok: false, mensaje: "Generar con IA es una función exclusiva del Plan Pro" },
-        { status: 403 }
       );
     }
 
@@ -86,6 +138,43 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    const { data: remainingAfterConsume, error: consumeError } =
+      await context.supabaseAdmin.rpc("consume_ai_generation", {
+        p_user_id: context.user.id,
+        p_limit: AI_DAILY_LIMIT,
+      });
+
+    if (consumeError) {
+      throw new Error(`No se pudo registrar el uso de IA: ${consumeError.message}`);
+    }
+
+    if (remainingAfterConsume === -1) {
+      return NextResponse.json(
+        {
+          ok: false,
+          mensaje: `Llegaste al límite de ${AI_DAILY_LIMIT} generaciones con IA de hoy. Podés volver a usarla mañana.`,
+          dailyLimit: AI_DAILY_LIMIT,
+          remaining: 0,
+        },
+        { status: 429 }
+      );
+    }
+
+    let usageConsumed = true;
+
+    const releaseUsage = async () => {
+      if (!usageConsumed) return;
+      usageConsumed = false;
+
+      const { error } = await context.supabaseAdmin.rpc("release_ai_generation", {
+        p_user_id: context.user.id,
+      });
+
+      if (error) {
+        console.error("No se pudo devolver el cupo de IA:", error.message);
+      }
+    };
 
     const prompt = `Redactá una descripción profesional para un presupuesto comercial en español de Argentina.
 
@@ -135,6 +224,7 @@ Reglas:
     };
 
     if (!geminiResponse.ok) {
+      await releaseUsage();
       console.error("Error Gemini:", data.error?.message ?? data);
       return NextResponse.json(
         {
@@ -152,6 +242,7 @@ Reglas:
         .trim() ?? "";
 
     if (!descripcion) {
+      await releaseUsage();
       return NextResponse.json(
         {
           ok: false,
@@ -161,7 +252,17 @@ Reglas:
       );
     }
 
-    return NextResponse.json({ ok: true, descripcion });
+    usageConsumed = false;
+
+    return NextResponse.json({
+      ok: true,
+      descripcion,
+      dailyLimit: AI_DAILY_LIMIT,
+      remaining:
+        typeof remainingAfterConsume === "number"
+          ? remainingAfterConsume
+          : Math.max(AI_DAILY_LIMIT - 1, 0),
+    });
   } catch (error) {
     console.error("Error generando descripción con IA:", error);
     return NextResponse.json(
