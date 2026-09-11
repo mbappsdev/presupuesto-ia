@@ -60,15 +60,13 @@ export async function generarPDF(presupuesto: {
 
   let logoData: string | null = null;
 
-if (logoUrl) {
-  try {
-    logoData = await cargarImagenComoDataURL(logoUrl);
-  } catch (error) {
-    console.error("No se pudo cargar el logo:", error);
+  if (logoUrl) {
+    try {
+      logoData = await cargarImagenComoDataURL(logoUrl);
+    } catch (error) {
+      console.error("No se pudo cargar el logo:", error);
+    }
   }
-}
-
-
 
   // ==========================================
   // ENCABEZADO
@@ -77,20 +75,20 @@ if (logoUrl) {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(22);
 
-if (logoData) {
-  doc.addImage(
-    logoData,
-    "JPEG",
-    20,
-    12,
-    30,
-    30
-  );
+  if (logoData) {
+    doc.addImage(
+      logoData,
+      "JPEG",
+      20,
+      12,
+      30,
+      30
+    );
 
-  doc.text("PresupuestoIA", 55, 22);
-} else {
-  doc.text("PresupuestoIA", 20, 22);
-}
+    doc.text("PresupuestoIA", 55, 22);
+  } else {
+    doc.text("PresupuestoIA", 20, 22);
+  }
 
   doc.setFontSize(14);
 
@@ -131,8 +129,8 @@ if (logoData) {
   }
   
   if (empresaDatos?.sitio_web) {
-  doc.text(`Web: ${empresaDatos.sitio_web}`, 55, yEmpresa);
-  yEmpresa += 5;
+    doc.text(`Web: ${empresaDatos.sitio_web}`, 55, yEmpresa);
+    yEmpresa += 5;
   }
 
   // Línea del encabezado
@@ -248,7 +246,7 @@ if (logoData) {
 
   doc.text("Descripción", 25, yTabla);
 
-  doc.text("Importe", 165, yTabla, {
+  doc.text("Importe", 185, yTabla, {
     align: "right",
   });
 
@@ -257,9 +255,11 @@ if (logoData) {
   doc.setTextColor(0, 0, 0);
   doc.setFont("helvetica", "normal");
 
+  // Dejamos una columna reservada para el importe, para que descripciones largas
+  // (incluidas las generadas con IA) nunca se superpongan con el precio.
   const descripcion = doc.splitTextToSize(
     presupuesto.descripcion,
-    125
+    108
   );
 
   const yDescripcion = yTabla + 12;
@@ -271,7 +271,7 @@ if (logoData) {
     yDescripcion
   );
 
-    // Importe
+  // Importe
   const precioFormateado = formatearMoneda(
     presupuesto.precio,
     presupuesto.moneda || "ARS"
@@ -279,7 +279,7 @@ if (logoData) {
 
   doc.text(
     `${presupuesto.moneda || "ARS"} ${precioFormateado}`,
-    165,
+    185,
     yDescripcion,
     {
       align: "right",
@@ -303,21 +303,20 @@ if (logoData) {
   // TOTAL
   // ==========================================
 
-const yTotal = ySeparador + 15;
+  const yTotal = ySeparador + 15;
   
-doc.setFont("helvetica", "bold");
-doc.setFontSize(16);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
 
-doc.text(
-  `${presupuesto.moneda || "ARS"} ${precioFormateado}`,
-  165,
-  yTotal,
-  {
-    align: "right",
-  }
-);
+  doc.text(
+    `${presupuesto.moneda || "ARS"} ${precioFormateado}`,
+    185,
+    yTotal,
+    {
+      align: "right",
+    }
+  );
 
- 
   // ==========================================
   // PIE DE PÁGINA
   // ==========================================
