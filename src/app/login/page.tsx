@@ -43,6 +43,7 @@ export default function LoginPage() {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          required
         />
 
         <input
@@ -51,6 +52,7 @@ export default function LoginPage() {
           placeholder="Contraseña"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          required
         />
 
         <button
@@ -61,10 +63,21 @@ export default function LoginPage() {
         </button>
 
         {message && (
-          <p className="mt-4 text-center text-sm">
+          <p className="mt-4 text-center text-sm text-red-600">
             {message}
           </p>
         )}
+
+        <p className="mt-6 text-center text-sm text-slate-600">
+          ¿No tenés cuenta?{" "}
+          <button
+            type="button"
+            onClick={() => router.push("/register")}
+            className="font-semibold text-blue-700 hover:underline"
+          >
+            Crear cuenta
+          </button>
+        </p>
       </form>
     </main>
   );
