@@ -1,4 +1,5 @@
 export const FOUNDER_CUSTOMER_LIMIT = 30;
+export const FOUNDER_LOYALTY_DISCOUNT = 0.25;
 
 export type PricingPhase = "founder" | "standard";
 export type BillingPeriod = "monthly" | "quarterly" | "semiannual" | "annual";
@@ -84,4 +85,16 @@ export function getSubscriptionPlan(
   phase: PricingPhase
 ) {
   return getSubscriptionPlans(phase).find((plan) => plan.id === period)!;
+}
+
+export function getBillingPeriodFromMonths(months: number): BillingPeriod | null {
+  return definitions.find((plan) => plan.months === months)?.id ?? null;
+}
+
+export function getFounderLoyaltyPrice(period: BillingPeriod) {
+  const definition = definitions.find((plan) => plan.id === period)!;
+  const discounted = definition.standardPrice * (1 - FOUNDER_LOYALTY_DISCOUNT);
+
+  // Redondeamos a centenas para evitar importes poco comerciales como $11.175.
+  return Math.round(discounted / 100) * 100;
 }
