@@ -337,7 +337,7 @@ export default function NuevoPresupuestoPage() {
                 {esProActivo && (
                   <p className="mt-2 text-xs font-medium text-violet-700">
                     {aiRemaining === null
-                      ? `Hasta ${aiDailyLimit} generaciones por día.`
+                      ? "Consultando cupo de IA..."
                       : `Generaciones disponibles hoy: ${aiRemaining} / ${aiDailyLimit}`}
                   </p>
                 )}
