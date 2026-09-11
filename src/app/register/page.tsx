@@ -11,11 +11,13 @@ export default function RegisterPage() {
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [hasSession, setHasSession] = useState(false);
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
     setMessage("");
     setSuccess(false);
+    setHasSession(false);
     setLoading(true);
 
     const { data, error } = await supabase.auth.signUp({
@@ -30,14 +32,14 @@ export default function RegisterPage() {
       return;
     }
 
-    if (data.session) {
-      setSuccess(true);
-      setMessage("Cuenta creada correctamente. Ya podés empezar a usar PresupuestoIA.");
-      return;
-    }
-
+    const sessionCreated = Boolean(data.session);
+    setHasSession(sessionCreated);
     setSuccess(true);
-    setMessage("Cuenta creada correctamente. Ya podés iniciar sesión.");
+    setMessage(
+      sessionCreated
+        ? "Cuenta creada correctamente. Ya podés empezar a usar PresupuestoIA."
+        : "Cuenta creada correctamente. Ya podés iniciar sesión."
+    );
   }
 
   return (
@@ -95,7 +97,7 @@ export default function RegisterPage() {
         {success && (
           <button
             type="button"
-            onClick={() => router.push(dataSessionExists() ? "/dashboard" : "/login")}
+            onClick={() => router.push(hasSession ? "/dashboard" : "/login")}
             className="mt-4 w-full rounded-lg border border-blue-600 py-3 font-semibold text-blue-700 hover:bg-blue-50"
           >
             Continuar
@@ -115,8 +117,4 @@ export default function RegisterPage() {
       </form>
     </main>
   );
-
-  function dataSessionExists() {
-    return success && message.includes("empezar a usar");
-  }
 }
