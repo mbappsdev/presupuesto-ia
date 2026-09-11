@@ -114,7 +114,7 @@ export default function ProPage() {
         <div className="mx-auto mt-8 max-w-2xl rounded-2xl bg-white p-5 shadow-sm">
           <h2 className="font-bold text-slate-800">Incluido en Pro</h2>
           <div className="mt-3 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
-            <p>✨ Descripciones de presupuestos generadas con IA</p>
+            <p>✨ Hasta 20 descripciones por día generadas con IA</p>
             <p>✅ Presupuestos sin límites diarios</p>
             <p>✅ Todas las monedas</p>
             <p>✅ PDF profesional</p>
