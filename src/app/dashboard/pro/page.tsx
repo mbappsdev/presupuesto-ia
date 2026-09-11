@@ -35,9 +35,15 @@ export default function ProPage() {
           </p>
 
           {pricing?.phase === "founder" && (
-            <p className="mt-3 inline-block rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-900">
-              Precio fundador · quedan {pricing.founderRemaining} lugares
-            </p>
+            <div className="mt-3">
+              <p className="inline-block rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-900">
+                Precio fundador · quedan {pricing.founderRemaining} lugares
+              </p>
+              <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600">
+                Los primeros 30 clientes mantienen el precio fundador durante 12 meses.
+                Después conservan un 25% de descuento sobre el precio público vigente.
+              </p>
+            </div>
           )}
         </div>
 
