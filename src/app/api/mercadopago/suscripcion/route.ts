@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/api-auth";
+import { ensureEmpresaForUser } from "@/lib/empresa-server";
 import {
-  getEmpresaForUser,
   getMercadoPagoSubscription,
   getSubscriptionPricingPhase,
   saveSubscriptionInEmpresa,
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const empresa = await getEmpresaForUser(user.id);
+    const empresa = await ensureEmpresaForUser(user.id);
     const pricing = await getSubscriptionPricingPhase();
     const selectedPlan = getSubscriptionPlan(body.period, pricing.phase);
 
