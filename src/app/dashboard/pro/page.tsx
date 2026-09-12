@@ -40,8 +40,8 @@ export default function ProPage() {
                 Precio fundador · quedan {pricing.founderRemaining} lugares
               </p>
               <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600">
-                Los primeros 30 clientes mantienen el precio fundador durante 12 meses.
-                Después conservan un 25% de descuento sobre el precio público vigente.
+                Los primeros mantienen el precio fundador durante 12 meses. Después
+                conservan un 25% de descuento sobre el precio público vigente.
               </p>
             </div>
           )}
@@ -79,7 +79,9 @@ export default function ProPage() {
                   {formatArs(plan.price)}
                 </p>
                 <p className="text-sm text-slate-500">
-                  cada {plan.shortLabel.toLowerCase()}
+                  {plan.months === 1
+                    ? "por mes"
+                    : `cada ${plan.shortLabel.toLowerCase()}`}
                 </p>
 
                 {plan.months > 1 && (
@@ -104,7 +106,7 @@ export default function ProPage() {
                       : "bg-slate-800 hover:bg-slate-900"
                   }`}
                 >
-                  Elegir {plan.label.toLowerCase()}
+                  Elegir plan {plan.label.toLowerCase()}
                 </button>
               </article>
             ))}
