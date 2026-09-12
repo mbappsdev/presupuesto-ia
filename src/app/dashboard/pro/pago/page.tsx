@@ -127,7 +127,12 @@ export default function PagoProPage() {
       const data = await respuesta.json();
 
       if (!respuesta.ok || !data.ok) {
-        setError(data.mensaje ?? "No se pudo iniciar la suscripción.");
+        const detalle = typeof data.detalle === "string" ? data.detalle.trim() : "";
+        setError(
+          detalle
+            ? `${data.mensaje ?? "No se pudo iniciar la suscripción."}: ${detalle}`
+            : data.mensaje ?? "No se pudo iniciar la suscripción."
+        );
         return;
       }
 
