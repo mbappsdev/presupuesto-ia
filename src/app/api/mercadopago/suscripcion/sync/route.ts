@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/api-auth";
+import { ensureEmpresaForUser } from "@/lib/empresa-server";
 import {
   findMercadoPagoSubscription,
-  getEmpresaForUser,
   getMercadoPagoSubscription,
   saveSubscriptionInEmpresa,
 } from "@/lib/mercadopago-subscription";
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const empresa = await getEmpresaForUser(user.id);
+    const empresa = await ensureEmpresaForUser(user.id);
     const rawBody = await request.text();
     const body = rawBody
       ? (JSON.parse(rawBody) as { subscriptionId?: unknown })
