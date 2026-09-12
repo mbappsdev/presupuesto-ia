@@ -24,7 +24,7 @@ export default function ProPage() {
     <main className="min-h-screen bg-slate-100">
       <Navbar />
 
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-5">
+      <div className="mx-auto max-w-6xl px-4 py-5 sm:px-5">
         <div className="text-center">
           <div className="text-3xl">🚀</div>
           <h1 className="mt-1 text-3xl font-bold text-blue-700">
@@ -47,18 +47,40 @@ export default function ProPage() {
           )}
         </div>
 
+        <div className="mx-auto mt-4 max-w-5xl rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="shrink-0">
+              <h2 className="font-bold text-slate-800">Incluido en Pro</h2>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Todo lo necesario para cotizar más rápido y con mejor presentación.
+              </p>
+            </div>
+
+            <div className="grid flex-1 gap-x-4 gap-y-1.5 text-sm text-slate-700 sm:grid-cols-2 lg:grid-cols-3">
+              <p>✨ Hasta 20 descripciones por día con IA</p>
+              <p>✅ Presupuestos ilimitados</p>
+              <p>✅ Todas las monedas</p>
+              <p>✅ PDF profesional</p>
+              <p>✅ Edición de presupuestos</p>
+            </div>
+          </div>
+          <p className="mt-2 text-[11px] text-slate-500 lg:text-right">
+            Sujeto a una política de uso razonable. Podés gestionar o cancelar la suscripción desde Mercado Pago.
+          </p>
+        </div>
+
         {error && (
-          <div className="mx-auto mt-5 max-w-xl rounded-xl border border-red-200 bg-red-50 p-4 text-center text-red-700">
+          <div className="mx-auto mt-4 max-w-xl rounded-xl border border-red-200 bg-red-50 p-4 text-center text-red-700">
             {error}
           </div>
         )}
 
         {!pricing && !error && (
-          <p className="mt-6 text-center text-slate-500">Cargando precios...</p>
+          <p className="mt-5 text-center text-slate-500">Cargando precios...</p>
         )}
 
         {pricing && (
-          <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {pricing.plans.map((plan) => (
               <article
                 key={plan.id}
@@ -112,21 +134,6 @@ export default function ProPage() {
             ))}
           </div>
         )}
-
-        <div className="mx-auto mt-6 max-w-2xl rounded-2xl bg-white p-4 shadow-sm">
-          <h2 className="font-bold text-slate-800">Incluido en Pro</h2>
-          <div className="mt-2 grid gap-x-5 gap-y-1.5 text-sm text-slate-700 sm:grid-cols-2">
-            <p>✨ Hasta 20 descripciones por día generadas con IA</p>
-            <p>✅ Presupuestos ilimitados</p>
-            <p>✅ Todas las monedas</p>
-            <p>✅ PDF profesional</p>
-            <p>✅ Edición de presupuestos</p>
-          </div>
-          <p className="mt-2 text-xs text-slate-500">
-            Sujeto a una política de uso razonable. Podés gestionar o cancelar la
-            suscripción desde Mercado Pago.
-          </p>
-        </div>
       </div>
     </main>
   );
