@@ -14,8 +14,9 @@ export default function LoginPage() {
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
+    setMessage("");
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -23,6 +24,29 @@ export default function LoginPage() {
     if (error) {
       setMessage(error.message);
       return;
+    }
+
+    const accessToken = data.session?.access_token;
+
+    if (accessToken) {
+      try {
+        const response = await fetch("/api/empresa/ensure", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("No se pudo preparar la empresa del usuario");
+        }
+      } catch (empresaError) {
+        console.error("Error preparando empresa:", empresaError);
+        setMessage(
+          "Pudimos iniciar sesión, pero no preparar tu empresa. Intentá nuevamente."
+        );
+        return;
+      }
     }
 
     router.push("/dashboard");
