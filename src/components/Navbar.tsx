@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import BrandLogo from "@/components/BrandLogo";
 
 export default function Navbar() {
   const router = useRouter();
@@ -22,19 +23,17 @@ export default function Navbar() {
 
   return (
     <nav className="bg-white border-b shadow-sm">
-      <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-        <Link
-          href="/dashboard"
-          className="text-xl font-bold text-blue-600"
-        >
-          PresupuestoIA
-        </Link>
-
-        <div className="flex gap-2">
-          <Link
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <div className="flex justify-center lg:justify-start">
+          <BrandLogo
             href="/dashboard"
-            className={linkClass("/dashboard")}
-          >
+            className="h-auto w-[230px] sm:w-[280px]"
+            priority
+          />
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-2">
+          <Link href="/dashboard" className={linkClass("/dashboard")}>
             🏠 Inicio
           </Link>
 
@@ -52,7 +51,10 @@ export default function Navbar() {
             🏢 Mi empresa
           </Link>
 
-          <Link href="/dashboard/planes" className={linkClass("/dashboard/planes")}>
+          <Link
+            href="/dashboard/planes"
+            className={linkClass("/dashboard/planes")}
+          >
             ⭐ Planes
           </Link>
 
