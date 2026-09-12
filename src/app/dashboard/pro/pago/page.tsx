@@ -149,45 +149,47 @@ export default function PagoProPage() {
     <main className="min-h-screen bg-slate-100">
       <Navbar />
 
-      <div className="mx-auto max-w-xl px-5 py-8">
-        <div className="rounded-2xl bg-white p-6 shadow-lg">
+      <div className="mx-auto max-w-lg px-4 py-5 sm:px-5">
+        <div className="rounded-2xl bg-white p-5 shadow-lg">
           <div className="text-center">
-            <div className="text-4xl">💳</div>
-            <h1 className="mt-2 text-3xl font-bold text-blue-700">
+            <div className="text-3xl">💳</div>
+            <h1 className="mt-1 text-2xl font-bold text-blue-700 sm:text-3xl">
               Confirmá tu Plan Pro
             </h1>
-            <p className="mt-2 text-slate-600">
+            <p className="mt-1 text-sm text-slate-600">
               El cobro se procesa de forma segura en Mercado Pago.
             </p>
           </div>
 
           {cargandoPrecio ? (
-            <p className="mt-6 text-center text-slate-500">Cargando precio...</p>
+            <p className="mt-4 text-center text-sm text-slate-500">Cargando precio...</p>
           ) : (
             selectedPlan && (
-              <div className="mt-6 rounded-xl border bg-slate-50 p-4">
-                <div className="flex items-start justify-between gap-4">
+              <div className="mt-4 rounded-xl border bg-slate-50 p-3.5">
+                <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="font-bold text-slate-800">
                       Pro {selectedPlan.label}
                     </p>
-                    <p className="text-sm text-slate-500">
-                      Renovación cada {selectedPlan.shortLabel.toLowerCase()}
+                    <p className="text-xs text-slate-500 sm:text-sm">
+                      {selectedPlan.months === 1
+                        ? "Renovación mensual"
+                        : `Renovación cada ${selectedPlan.shortLabel.toLowerCase()}`}
                     </p>
                   </div>
-                  <p className="text-2xl font-bold text-blue-700">
+                  <p className="text-xl font-bold text-blue-700 sm:text-2xl">
                     {formatArs(selectedPlan.price)}
                   </p>
                 </div>
 
                 {founderPrice && (
-                  <p className="mt-3 text-sm font-semibold text-amber-800">
+                  <p className="mt-2 text-xs font-semibold text-amber-800 sm:text-sm">
                     Incluye tu precio fundador durante los primeros 12 meses.
                   </p>
                 )}
 
-                <div className="mt-4 space-y-2 border-t pt-4 text-sm text-slate-700">
-                  <p>✅ Presupuestos sin límites diarios</p>
+                <div className="mt-3 space-y-1.5 border-t pt-3 text-xs text-slate-700 sm:text-sm">
+                  <p>✅ Presupuestos ilimitados</p>
                   <p>✅ Todas las monedas</p>
                   <p>✅ PDF profesional y edición</p>
                 </div>
@@ -196,22 +198,21 @@ export default function PagoProPage() {
           )}
 
           {error && (
-            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3">
+            <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3">
               <p className="text-sm text-red-700">{error}</p>
             </div>
           )}
 
-          <p className="mt-4 text-xs text-slate-500">
-            Al continuar aceptás la renovación automática. Podés cancelar cuando
-            quieras antes del próximo cobro.
+          <p className="mt-3 text-[11px] leading-4 text-slate-500 sm:text-xs">
+            Al continuar aceptás la renovación automática. Podés cancelar cuando quieras antes del próximo cobro.
           </p>
 
-          <div className="mt-5 flex gap-3">
+          <div className="mt-4 flex gap-3">
             <button
               type="button"
               onClick={() => router.push("/dashboard/pro")}
               disabled={cargando}
-              className="w-full rounded-xl border border-slate-300 py-3 font-semibold hover:bg-slate-50 disabled:opacity-50"
+              className="w-full rounded-xl border border-slate-300 py-2.5 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50"
             >
               ← Volver
             </button>
@@ -220,7 +221,7 @@ export default function PagoProPage() {
               type="button"
               onClick={iniciarSuscripcion}
               disabled={cargando || cargandoPrecio || !selectedPlan}
-              className="w-full rounded-xl bg-blue-600 py-3 font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+              className="w-full rounded-xl bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
             >
               {cargando ? "Conectando..." : "Pagar con Mercado Pago"}
             </button>
