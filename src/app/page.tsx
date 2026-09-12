@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import BrandLogo from "@/components/BrandLogo";
 
 export default function Home() {
   const router = useRouter();
@@ -25,10 +26,12 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-slate-950 text-white">
       <section className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-8 lg:px-8">
-        <header className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-lg font-bold tracking-tight">PresupuestoIA</p>
-            <p className="text-xs text-slate-400">Presupuestos profesionales, más rápido.</p>
+        <header className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="rounded-2xl bg-white px-3 py-2 shadow-sm">
+            <BrandLogo
+              className="h-auto w-[260px] sm:w-[330px]"
+              priority
+            />
           </div>
 
           <div className="flex items-center gap-3">
@@ -195,7 +198,7 @@ export default function Home() {
         </section>
 
         <footer className="border-t border-slate-800 py-6 text-center text-sm text-slate-500">
-          PresupuestoIA · Creá presupuestos profesionales de forma simple.
+          PresupuestoIA · Presupuestos profesionales en segundos. Cotiza más. Haz crecer tu negocio.
         </footer>
       </section>
     </main>
