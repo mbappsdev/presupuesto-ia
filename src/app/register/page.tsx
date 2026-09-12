@@ -14,6 +14,19 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [hasSession, setHasSession] = useState(false);
 
+  async function ensureEmpresa(accessToken: string) {
+    const response = await fetch("/api/empresa/ensure", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("No se pudo preparar la empresa del usuario");
+    }
+  }
+
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
     setMessage("");
@@ -26,14 +39,28 @@ export default function RegisterPage() {
       password,
     });
 
-    setLoading(false);
-
     if (error) {
+      setLoading(false);
       setMessage(error.message);
       return;
     }
 
     const sessionCreated = Boolean(data.session);
+
+    if (data.session?.access_token) {
+      try {
+        await ensureEmpresa(data.session.access_token);
+      } catch (empresaError) {
+        console.error("Error preparando empresa:", empresaError);
+        setLoading(false);
+        setMessage(
+          "La cuenta se creó, pero no pudimos preparar tu empresa. Iniciá sesión nuevamente para completar el acceso."
+        );
+        return;
+      }
+    }
+
+    setLoading(false);
     setHasSession(sessionCreated);
     setSuccess(true);
     setMessage(
