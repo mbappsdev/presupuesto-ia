@@ -57,8 +57,7 @@ export default function PlanesPage() {
     return (
       <main className="min-h-screen bg-slate-100">
         <Navbar />
-
-        <div className="flex justify-center items-center p-10">
+        <div className="flex items-center justify-center p-8">
           <p>Cargando planes...</p>
         </div>
       </main>
@@ -69,118 +68,77 @@ export default function PlanesPage() {
     <main className="min-h-screen bg-slate-100">
       <Navbar />
 
-      <div className="max-w-5xl mx-auto px-6 py-6">
-
-        <div className="text-center mb-6">
+      <div className="mx-auto max-w-5xl px-4 py-5 sm:px-6">
+        <div className="mb-4 text-center">
           <h1 className="text-3xl font-bold text-slate-800">
             Planes de PresupuestoIA
           </h1>
-
-          <p className="text-slate-600 mt-3">
+          <p className="mt-2 text-sm text-slate-600 sm:text-base">
             Elegí el plan que mejor se adapte a tu negocio.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-4xl mx-auto">
-
+        <div className="mx-auto grid max-w-4xl grid-cols-1 gap-4 md:grid-cols-2">
           {/* PLAN FREE */}
-
-          <div className="bg-white rounded-2xl shadow p-6 border">
-
+          <div className="rounded-2xl border bg-white p-5 shadow-sm">
             <div className="text-center">
-              <h2 className="text-2xl font-bold">
-                🆓 Free
-              </h2>
-
-              <p className="text-4xl font-bold mt-4">
-                $0
-              </p>
-
-              <p className="text-slate-500">
-                Para empezar
-              </p>
+              <h2 className="text-xl font-bold">🆓 Free</h2>
+              <p className="mt-2 text-3xl font-bold">$0</p>
+              <p className="text-sm text-slate-500">Para empezar</p>
             </div>
 
-            <div className="mt-5 space-y-3">
-
+            <div className="mt-4 space-y-2 text-sm sm:text-base">
               <p>✅ 5 presupuestos por día</p>
-
               <p>✅ 50 presupuestos por mes</p>
-
               <p>✅ Diferentes monedas</p>
-
               <p>✅ Generación de PDF</p>
-
               <p>✅ Edición de presupuestos</p>
-
             </div>
 
             <button
               disabled
-              className="mt-5 w-full bg-slate-200 text-slate-600 py-3 rounded-xl"
+              className="mt-4 w-full rounded-xl bg-slate-200 py-2.5 text-sm font-medium text-slate-600 sm:text-base"
             >
-              {plan === "free"
-                ? "Plan actual"
-                : "Plan gratuito"}
+              {plan === "free" ? "Plan actual" : "Plan gratuito"}
             </button>
-
           </div>
 
-
           {/* PLAN PRO */}
-
-          <div className="bg-white rounded-2xl shadow-lg p-6 border-2 border-blue-600 relative">
-
-            <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-              <span className="bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-semibold">
+          <div className="relative rounded-2xl border-2 border-blue-600 bg-white p-5 shadow-md">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+              <span className="whitespace-nowrap rounded-full bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white">
                 ⭐ RECOMENDADO
               </span>
             </div>
 
             <div className="text-center">
-
-              <h2 className="text-2xl font-bold text-blue-700">
-                🚀 Pro
-              </h2>
-
-              <p className="text-3xl font-bold mt-3">
+              <h2 className="text-xl font-bold text-blue-700">🚀 Pro</h2>
+              <p className="mt-2 text-3xl font-bold">
                 {monthlyPrice ? `Desde ${formatArs(monthlyPrice)}` : "Ver precios"}
               </p>
-
-              <p className="text-slate-500">
+              <p className="text-sm text-slate-500">
                 Frecuencias mensual, trimestral, semestral y anual
               </p>
-
             </div>
 
-            <div className="mt-5 space-y-3">
-
+            <div className="mt-4 space-y-2 text-sm sm:text-base">
               <p>✅ Presupuestos sin límites diarios</p>
-
               <p>✅ Sin límite diario</p>
-
               <p>✅ Todas las monedas</p>
-
               <p>✅ Generación de PDF</p>
-
               <p>✅ Edición de presupuestos</p>
-
               <p>🚀 Próximas funciones exclusivas</p>
-
             </div>
 
             <button
               type="button"
               onClick={() => router.push("/dashboard/pro")}
-              className="mt-5 w-full bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700"
+              className="mt-4 w-full rounded-xl bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 sm:text-base"
             >
               {plan === "pro" ? "Plan actual" : "Ver precios Pro"}
             </button>
-
           </div>
-
         </div>
-
       </div>
     </main>
   );
