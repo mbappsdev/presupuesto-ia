@@ -25,48 +25,47 @@ export default function ProPage() {
       <Navbar />
 
       <div className="mx-auto max-w-6xl px-4 py-5 sm:px-5">
-        <div className="text-center">
-          <div className="text-3xl">🚀</div>
-          <h1 className="mt-1 text-3xl font-bold text-blue-700">
-            PresupuestoIA Pro
-          </h1>
-          <p className="mt-1 text-sm text-slate-600 sm:text-base">
-            Elegí la frecuencia que mejor se adapte a tu negocio.
-          </p>
+        <div className="grid gap-5 xl:grid-cols-[1fr_340px] xl:items-start">
+          <div className="text-center xl:text-left">
+            <div className="text-3xl">🚀</div>
+            <h1 className="mt-1 text-3xl font-bold text-blue-700">
+              PresupuestoIA Pro
+            </h1>
+            <p className="mt-1 text-sm text-slate-600 sm:text-base">
+              Elegí la frecuencia que mejor se adapte a tu negocio.
+            </p>
 
-          {pricing?.phase === "founder" && (
-            <div className="mt-3">
-              <p className="inline-block rounded-full bg-amber-100 px-4 py-1.5 text-sm font-semibold text-amber-900">
-                Precio fundador · quedan {pricing.founderRemaining} lugares
-              </p>
-              <p className="mx-auto mt-2 max-w-2xl text-sm leading-5 text-slate-600">
-                Los primeros mantienen el precio fundador durante 12 meses. Después
-                conservan un 25% de descuento sobre el precio público vigente.
-              </p>
-            </div>
-          )}
-        </div>
+            {pricing?.phase === "founder" && (
+              <div className="mt-3">
+                <p className="inline-block rounded-full bg-amber-100 px-4 py-1.5 text-sm font-semibold text-amber-900">
+                  Precio fundador · quedan {pricing.founderRemaining} lugares
+                </p>
+                <p className="mx-auto mt-2 max-w-2xl text-sm leading-5 text-slate-600 xl:mx-0">
+                  Los primeros mantienen el precio fundador durante 12 meses. Después
+                  conservan un 25% de descuento sobre el precio público vigente.
+                </p>
+              </div>
+            )}
+          </div>
 
-        <div className="mx-auto mt-4 max-w-5xl rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="shrink-0">
-              <h2 className="font-bold text-slate-800">Incluido en Pro</h2>
-              <p className="mt-0.5 text-xs text-slate-500">
-                Todo lo necesario para cotizar más rápido y con mejor presentación.
-              </p>
-            </div>
+          <aside className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h2 className="font-bold text-slate-800">Incluido en Pro</h2>
+            <p className="mt-1 text-xs leading-5 text-slate-500">
+              Todo lo necesario para cotizar más rápido y con mejor presentación.
+            </p>
 
-            <div className="grid flex-1 gap-x-4 gap-y-1.5 text-sm text-slate-700 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-3 space-y-1.5 text-sm text-slate-700">
               <p>✨ Hasta 20 descripciones por día con IA</p>
               <p>✅ Presupuestos ilimitados</p>
               <p>✅ Todas las monedas</p>
               <p>✅ PDF profesional</p>
               <p>✅ Edición de presupuestos</p>
             </div>
-          </div>
-          <p className="mt-2 text-[11px] text-slate-500 lg:text-right">
-            Sujeto a una política de uso razonable. Podés gestionar o cancelar la suscripción desde Mercado Pago.
-          </p>
+
+            <p className="mt-3 text-[11px] leading-4 text-slate-500">
+              Sujeto a una política de uso razonable. Podés gestionar o cancelar la suscripción desde Mercado Pago.
+            </p>
+          </aside>
         </div>
 
         {error && (
