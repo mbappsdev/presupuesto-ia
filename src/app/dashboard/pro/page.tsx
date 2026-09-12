@@ -93,7 +93,7 @@ export default function ProPage() {
               >
                 {plan.featured && (
                   <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
-                    Mejor precio
+                    ⭐ MEJOR PRECIO
                   </span>
                 )}
 
