@@ -25,7 +25,7 @@ export default function ProPage() {
       <Navbar />
 
       <div className="mx-auto max-w-6xl px-4 py-5 sm:px-5">
-        <div className="grid gap-5 xl:grid-cols-[1fr_340px] xl:items-start">
+        <div className="grid gap-4 xl:grid-cols-[1fr_340px] xl:items-start">
           <div className="text-center xl:text-left">
             <div className="text-3xl">🚀</div>
             <h1 className="mt-1 text-3xl font-bold text-blue-700">
@@ -62,8 +62,8 @@ export default function ProPage() {
               <p>✅ Edición de presupuestos</p>
             </div>
 
-            <p className="mt-3 text-[11px] leading-4 text-slate-500">
-              Sujeto a una política de uso razonable. Podés gestionar o cancelar la suscripción desde Mercado Pago.
+            <p className="mt-2 whitespace-nowrap text-[10px] leading-4 text-slate-500">
+              Podés gestionar o cancelar la suscripción desde Mercado Pago.
             </p>
           </aside>
         </div>
@@ -75,11 +75,11 @@ export default function ProPage() {
         )}
 
         {!pricing && !error && (
-          <p className="mt-5 text-center text-slate-500">Cargando precios...</p>
+          <p className="mt-4 text-center text-slate-500">Cargando precios...</p>
         )}
 
         {pricing && (
-          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {pricing.plans.map((plan) => (
               <article
                 key={plan.id}
