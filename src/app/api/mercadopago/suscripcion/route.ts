@@ -12,6 +12,26 @@ import {
   isBillingPeriod,
 } from "@/lib/subscription-plans";
 
+function normalizeMercadoPagoInitPoint(initPoint?: string | null) {
+  if (!initPoint) return null;
+
+  try {
+    const url = new URL(initPoint);
+
+    if (url.hostname.endsWith("mercadopago.com.ar")) {
+      url.searchParams.delete("activation");
+    }
+
+    return url.toString();
+  } catch {
+    return initPoint.replace(/([?&])activation=true(&|$)/, (_match, prefix, suffix) => {
+      if (prefix === "?" && suffix === "&") return "?";
+      if (prefix === "?" && suffix === "") return "";
+      return suffix === "&" ? "&" : "";
+    });
+  }
+}
+
 export async function POST(request: Request) {
   const token = process.env.MERCADOPAGO_ACCESS_TOKEN;
 
@@ -77,7 +97,7 @@ export async function POST(request: Request) {
           ok: true,
           reused: true,
           subscriptionId: currentSubscription.id,
-          initPoint: currentSubscription.init_point,
+          initPoint: normalizeMercadoPagoInitPoint(currentSubscription.init_point),
           status: currentSubscription.status,
         });
       }
@@ -156,7 +176,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ok: true,
       subscriptionId: data.id,
-      initPoint: data.init_point,
+      initPoint: normalizeMercadoPagoInitPoint(data.init_point),
       status: data.status,
       applicationId: data.application_id,
       collectorId: data.collector_id,
