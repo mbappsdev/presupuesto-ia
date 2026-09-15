@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -198,7 +199,15 @@ export default function Home() {
         </section>
 
         <footer className="border-t border-slate-800 py-6 text-center text-sm text-slate-500">
-          PresupuestoIA · Presupuestos profesionales en segundos. Cotiza más. Haz crecer tu negocio.
+          <p>PresupuestoIA · Presupuestos profesionales en segundos. Cotiza más. Haz crecer tu negocio.</p>
+          <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-2">
+            <Link href="/terminos" className="hover:text-slate-300 hover:underline">
+              Términos y condiciones
+            </Link>
+            <Link href="/privacidad" className="hover:text-slate-300 hover:underline">
+              Política de privacidad
+            </Link>
+          </div>
         </footer>
       </section>
     </main>
