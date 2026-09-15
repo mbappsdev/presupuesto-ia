@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
@@ -105,6 +106,17 @@ export default function RegisterPage() {
           minLength={6}
           required
         />
+
+        <p className="mb-4 text-center text-xs leading-5 text-slate-500">
+          Al crear una cuenta aceptás los {" "}
+          <Link href="/terminos" className="font-semibold text-blue-700 hover:underline">
+            Términos y condiciones
+          </Link>{" "}
+          y la {" "}
+          <Link href="/privacidad" className="font-semibold text-blue-700 hover:underline">
+            Política de privacidad
+          </Link>.
+        </p>
 
         <button
           className="bg-blue-600 text-white w-full py-3 rounded-lg disabled:bg-slate-400"
