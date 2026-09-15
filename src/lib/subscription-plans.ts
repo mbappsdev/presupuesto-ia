@@ -20,7 +20,7 @@ const definitions: SubscriptionPlanDefinition[] = [
     label: "Mensual",
     shortLabel: "1 mes",
     months: 1,
-    founderPrice: 15,
+    founderPrice: 9900,
     standardPrice: 14900,
   },
   {
