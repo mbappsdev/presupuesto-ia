@@ -28,9 +28,9 @@ export default function Home() {
     <main className="min-h-screen bg-slate-950 text-white">
       <section className="mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
         <header className="flex items-center justify-between gap-3">
-          <div className="shrink-0 rounded-xl bg-white px-2 py-1.5 shadow-sm sm:rounded-2xl sm:px-3 sm:py-2">
+          <div className="shrink-0 overflow-hidden rounded-2xl bg-white px-3 py-2 shadow-sm">
             <BrandLogo
-              className="h-auto w-[160px] sm:w-[330px]"
+              className="block h-auto w-[180px] rounded-xl bg-white sm:w-[330px]"
               priority
             />
           </div>
