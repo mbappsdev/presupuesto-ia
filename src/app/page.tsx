@@ -26,21 +26,21 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
-      <section className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-8 lg:px-8">
-        <header className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="rounded-2xl bg-white px-3 py-2 shadow-sm">
+      <section className="mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
+        <header className="flex items-center justify-between gap-3">
+          <div className="shrink-0 rounded-xl bg-white px-2 py-1.5 shadow-sm sm:rounded-2xl sm:px-3 sm:py-2">
             <BrandLogo
-              className="h-auto w-[260px] sm:w-[330px]"
+              className="h-auto w-[160px] sm:w-[330px]"
               priority
             />
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             {!checkingSession && hasSession ? (
               <button
                 type="button"
                 onClick={() => router.push("/dashboard")}
-                className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-slate-200"
+                className="whitespace-nowrap rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-slate-200 sm:px-4 sm:text-sm"
               >
                 Ir a mi panel
               </button>
@@ -56,7 +56,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => router.push("/register")}
-                  className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-slate-200"
+                  className="whitespace-nowrap rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-slate-200 sm:px-4 sm:text-sm"
                 >
                   Crear cuenta gratis
                 </button>
