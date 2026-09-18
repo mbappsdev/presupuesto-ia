@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { syncMercadoPagoSubscription } from "@/lib/sync-subscription";
 
+type Plan = "free" | "pro" | "owner";
+
 export default function NuevoPresupuestoPage() {
   const router = useRouter();
   const [cliente, setCliente] = useState("");
@@ -13,7 +15,7 @@ export default function NuevoPresupuestoPage() {
   const [precio, setPrecio] = useState("");
   const [moneda, setMoneda] = useState("ARS");
 
-  const [plan, setPlan] = useState<"free" | "pro">("free");
+  const [plan, setPlan] = useState<Plan>("free");
   const [presupuestosHoy, setPresupuestosHoy] = useState(0);
   const [presupuestosMes, setPresupuestosMes] = useState(0);
 
@@ -34,11 +36,12 @@ export default function NuevoPresupuestoPage() {
     new Date(subscriptionExpiresAt) < new Date();
 
   const esProActivo =
-    plan === "pro" &&
-    (subscriptionStatus === "active" ||
-      subscriptionStatus === "paused" ||
-      subscriptionStatus === "cancelled") &&
-    !suscripcionVencida;
+    plan === "owner" ||
+    (plan === "pro" &&
+      (subscriptionStatus === "active" ||
+        subscriptionStatus === "paused" ||
+        subscriptionStatus === "cancelled") &&
+      !suscripcionVencida);
 
   useEffect(() => {
     cargarDatos();
@@ -70,7 +73,13 @@ export default function NuevoPresupuestoPage() {
       .eq("user_id", user.id)
       .single();
 
-    setPlan(empresaData?.plan === "pro" ? "pro" : "free");
+    setPlan(
+      empresaData?.plan === "owner"
+        ? "owner"
+        : empresaData?.plan === "pro"
+          ? "pro"
+          : "free"
+    );
     setSubscriptionStatus(empresaData?.subscription_status || null);
     setSubscriptionExpiresAt(empresaData?.subscription_expires_at || null);
     setCargandoPlan(false);
