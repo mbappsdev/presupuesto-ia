@@ -21,7 +21,7 @@ export async function ensureEmpresaForUser(userId: string) {
 
   const { data: existing, error: existingError } = await supabaseAdmin
     .from("empresa")
-    .select("id, subscription_id")
+    .select("id, subscription_id, plan")
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -32,7 +32,11 @@ export async function ensureEmpresaForUser(userId: string) {
   }
 
   if (existing) {
-    return existing as { id: string; subscription_id: string | null };
+    return existing as {
+      id: string;
+      subscription_id: string | null;
+      plan: string;
+    };
   }
 
   const { data: created, error: createError } = await supabaseAdmin
@@ -49,5 +53,9 @@ export async function ensureEmpresaForUser(userId: string) {
     );
   }
 
-  return created as { id: string; subscription_id: string | null };
+  return created as {
+    id: string;
+    subscription_id: string | null;
+    plan: string;
+  };
 }
