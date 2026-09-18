@@ -8,6 +8,8 @@ import { generarPDF } from "@/utils/pdf";
 import { formatearMoneda } from "@/utils/moneda";
 import { syncMercadoPagoSubscription } from "@/lib/sync-subscription";
 
+type Plan = "free" | "pro" | "owner";
+
 type Empresa = {
   nombre: string;
   cuit: string;
@@ -23,7 +25,7 @@ export default function DashboardPage() {
 
   const [presupuestos, setPresupuestos] = useState<any[]>([]);
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
-  const [plan, setPlan] = useState<"free" | "pro">("free");
+  const [plan, setPlan] = useState<Plan>("free");
   const [cargandoPlan, setCargandoPlan] = useState(true);
   const [presupuestosHoy, setPresupuestosHoy] = useState(0);
   const [subscriptionStatus, setSubscriptionStatus] =
@@ -82,8 +84,12 @@ export default function DashboardPage() {
     console.log("Error empresa:", empresaError);
 
     if (!empresaError && empresaData) {
-      let planActual: "free" | "pro" =
-        empresaData?.plan === "pro" ? "pro" : "free";
+      let planActual: Plan =
+        empresaData?.plan === "owner"
+          ? "owner"
+          : empresaData?.plan === "pro"
+            ? "pro"
+            : "free";
       let estadoActual = empresaData.subscription_status;
 
       const fechaVencimiento = empresaData.subscription_expires_at
@@ -91,8 +97,10 @@ export default function DashboardPage() {
         : null;
 
       const ahora = new Date();
+      const esCuentaOwner = planActual === "owner";
       const estadoSinRenovacion =
-        estadoActual === "paused" || estadoActual === "cancelled";
+        !esCuentaOwner &&
+        (estadoActual === "paused" || estadoActual === "cancelled");
       const tieneAccesoPagadoVigente =
         Boolean(fechaVencimiento && fechaVencimiento > ahora);
 
@@ -173,12 +181,14 @@ export default function DashboardPage() {
         new Date(subscriptionExpiresAt) <= new Date()
     );
 
+  const esOwner = plan === "owner";
   const esProActivo =
-    plan === "pro" &&
-    (subscriptionStatus === "active" ||
-      subscriptionStatus === "paused" ||
-      subscriptionStatus === "cancelled") &&
-    !suscripcionVencida;
+    esOwner ||
+    (plan === "pro" &&
+      (subscriptionStatus === "active" ||
+        subscriptionStatus === "paused" ||
+        subscriptionStatus === "cancelled") &&
+      !suscripcionVencida);
 
   return (
     <>
@@ -197,7 +207,7 @@ export default function DashboardPage() {
           {!cargandoPlan && (
             <div className="mb-6">
               <span className="inline-block bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-semibold">
-                Plan: {esProActivo ? "⭐ Pro" : "🆓 Gratis"}
+                Plan: {esOwner ? "👑 Propietaria" : esProActivo ? "⭐ Pro" : "🆓 Gratis"}
               </span>
 
               {plan === "pro" &&
@@ -230,7 +240,7 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {esProActivo && subscriptionExpiresAt && (
+              {plan === "pro" && esProActivo && subscriptionExpiresAt && (
                 <div className="mt-1 text-slate-600">
                   📅 Acceso Pro hasta:{" "}
                   {new Date(subscriptionExpiresAt).toLocaleDateString("es-AR")}
