@@ -77,6 +77,17 @@ export async function POST(request: Request) {
     }
 
     const empresa = await ensureEmpresaForUser(user.id);
+
+    if (empresa.plan === "owner") {
+      return NextResponse.json(
+        {
+          ok: false,
+          mensaje: "La cuenta propietaria ya tiene acceso completo y no necesita suscripción",
+        },
+        { status: 409 }
+      );
+    }
+
     const pricing = await getSubscriptionPricingPhase();
     const selectedPlan = getSubscriptionPlan(body.period, pricing.phase);
 

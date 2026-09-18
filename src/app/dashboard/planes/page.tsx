@@ -10,10 +10,12 @@ import {
   formatArs,
 } from "@/lib/subscription-pricing-client";
 
+type Plan = "free" | "pro" | "owner";
+
 export default function PlanesPage() {
   const router = useRouter();
 
-  const [plan, setPlan] = useState<"free" | "pro">("free");
+  const [plan, setPlan] = useState<Plan>("free");
   const [monthlyPrice, setMonthlyPrice] = useState<number | null>(null);
   const [cargando, setCargando] = useState(true);
 
@@ -37,7 +39,13 @@ export default function PlanesPage() {
         .single();
 
       if (!error && data) {
-        setPlan(data.plan === "pro" ? "pro" : "free");
+        setPlan(
+          data.plan === "owner"
+            ? "owner"
+            : data.plan === "pro"
+              ? "pro"
+              : "free"
+        );
       }
 
       try {
@@ -76,6 +84,11 @@ export default function PlanesPage() {
           <p className="mt-2 text-sm text-slate-600 sm:text-base">
             Elegí el plan que mejor se adapte a tu negocio.
           </p>
+          {plan === "owner" && (
+            <p className="mt-3 font-semibold text-violet-700">
+              👑 Cuenta propietaria · acceso completo sin suscripción
+            </p>
+          )}
         </div>
 
         <div className="mx-auto grid max-w-4xl grid-cols-1 gap-4 md:grid-cols-2">
@@ -132,10 +145,17 @@ export default function PlanesPage() {
 
             <button
               type="button"
-              onClick={() => router.push("/dashboard/pro")}
-              className="mt-4 w-full rounded-xl bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 sm:text-base"
+              onClick={() => {
+                if (plan !== "owner") router.push("/dashboard/pro");
+              }}
+              disabled={plan === "owner"}
+              className="mt-4 w-full rounded-xl bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-violet-600 sm:text-base"
             >
-              {plan === "pro" ? "Plan actual" : "Ver precios Pro"}
+              {plan === "owner"
+                ? "Cuenta propietaria"
+                : plan === "pro"
+                  ? "Plan actual"
+                  : "Ver precios Pro"}
             </button>
           </div>
         </div>

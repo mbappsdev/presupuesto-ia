@@ -19,6 +19,16 @@ export async function POST(request: Request) {
     }
 
     const empresa = await ensureEmpresaForUser(user.id);
+
+    if (empresa.plan === "owner") {
+      return NextResponse.json({
+        ok: true,
+        skipped: true,
+        plan: "owner",
+        subscriptionStatus: "active",
+      });
+    }
+
     const rawBody = await request.text();
     const body = rawBody
       ? (JSON.parse(rawBody) as { subscriptionId?: unknown })

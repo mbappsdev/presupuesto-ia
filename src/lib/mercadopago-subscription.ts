@@ -137,7 +137,7 @@ async function ensureFounderStatus(
 
   const { data: empresa, error: empresaError } = await supabaseAdmin
     .from("empresa")
-    .select("id, is_founder, founder_started_at, founder_price_until")
+    .select("id, plan, is_founder, founder_started_at, founder_price_until")
     .eq("id", empresaId)
     .single();
 
@@ -145,14 +145,15 @@ async function ensureFounderStatus(
     throw new Error("No se pudo consultar el estado fundador de la empresa");
   }
 
-  if (empresa.is_founder) {
+  if (empresa.plan === "owner" || empresa.is_founder) {
     return;
   }
 
   const { count, error: countError } = await supabaseAdmin
     .from("empresa")
     .select("id", { count: "exact", head: true })
-    .eq("is_founder", true);
+    .eq("is_founder", true)
+    .neq("plan", "owner");
 
   if (countError) {
     throw new Error(
@@ -195,12 +196,19 @@ export async function saveSubscriptionInEmpresa(
   const { data: existingEmpresa, error: existingEmpresaError } =
     await supabaseAdmin
       .from("empresa")
-      .select("subscription_expires_at")
+      .select("plan, subscription_status, subscription_expires_at")
       .eq("id", empresaId)
       .single();
 
   if (existingEmpresaError || !existingEmpresa) {
     throw new Error("No se pudo consultar la empresa antes de actualizar la suscripción");
+  }
+
+  if (existingEmpresa.plan === "owner") {
+    return {
+      plan: "owner",
+      subscriptionStatus: existingEmpresa.subscription_status ?? "active",
+    };
   }
 
   const effectiveExpiresAt =

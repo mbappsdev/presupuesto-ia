@@ -54,7 +54,9 @@ async function getProUserContext(request: Request) {
     ? new Date(empresa.subscription_expires_at)
     : null;
   const tieneAccesoVigente = !expiresAt || expiresAt > new Date();
-  const esPro = empresa.plan === "pro" && tieneAccesoVigente;
+  const esPro =
+    empresa.plan === "owner" ||
+    (empresa.plan === "pro" && tieneAccesoVigente);
 
   if (!esPro) {
     return {
