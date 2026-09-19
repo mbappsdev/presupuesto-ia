@@ -58,6 +58,13 @@ export default function Navbar() {
             ⭐ Planes
           </Link>
 
+          <Link
+            href="/dashboard/cuenta"
+            className={linkClass("/dashboard/cuenta")}
+          >
+            👤 Mi cuenta
+          </Link>
+
           <button
             onClick={cerrarSesion}
             className="px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"

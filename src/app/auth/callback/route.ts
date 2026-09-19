@@ -5,6 +5,11 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
 
   const code = searchParams.get("code");
+  const requestedNext = searchParams.get("next");
+  const next =
+    requestedNext?.startsWith("/") && !requestedNext.startsWith("//")
+      ? requestedNext
+      : "/dashboard";
 
   if (code) {
     const supabase = await createClient();
@@ -12,7 +17,5 @@ export async function GET(request: Request) {
     await supabase.auth.exchangeCodeForSession(code);
   }
 
-  return NextResponse.redirect(
-    new URL("/dashboard", request.url)
-  );
+  return NextResponse.redirect(new URL(next, request.url));
 }
