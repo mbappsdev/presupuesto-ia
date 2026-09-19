@@ -35,8 +35,9 @@ export default function NuevoPresupuestoPage() {
     subscriptionExpiresAt !== null &&
     new Date(subscriptionExpiresAt) < new Date();
 
+  const esOwner = plan === "owner";
   const esProActivo =
-    plan === "owner" ||
+    esOwner ||
     (plan === "pro" &&
       (subscriptionStatus === "active" ||
         subscriptionStatus === "paused" ||
@@ -156,7 +157,7 @@ export default function NuevoPresupuestoPage() {
       return;
     }
 
-    if (aiRemaining === 0) {
+    if (!esOwner && aiRemaining === 0) {
       setErrorIA(
         `Llegaste al límite de ${aiDailyLimit} generaciones con IA de hoy. Podés volver a usarla mañana.`
       );
@@ -345,7 +346,9 @@ export default function NuevoPresupuestoPage() {
                 </p>
                 {esProActivo && (
                   <p className="mt-2 text-xs font-medium text-violet-700">
-                    {aiRemaining === null
+                    {esOwner
+                      ? "Generaciones con IA ilimitadas"
+                      : aiRemaining === null
                       ? "Consultando cupo de IA..."
                       : `Generaciones disponibles hoy: ${aiRemaining} / ${aiDailyLimit}`}
                   </p>
@@ -374,12 +377,12 @@ export default function NuevoPresupuestoPage() {
                   <button
                     type="button"
                     onClick={generarDescripcionIA}
-                    disabled={generandoIA || aiRemaining === 0}
+                    disabled={generandoIA || (!esOwner && aiRemaining === 0)}
                     className="rounded-xl bg-violet-600 px-4 py-2 font-semibold text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-violet-300"
                   >
                     {generandoIA
                       ? "✨ Generando..."
-                      : aiRemaining === 0
+                      : !esOwner && aiRemaining === 0
                         ? "🔒 Límite diario alcanzado"
                         : descripcion
                           ? "✨ Regenerar con IA"
