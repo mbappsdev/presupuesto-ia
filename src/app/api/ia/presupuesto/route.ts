@@ -67,7 +67,11 @@ async function getProUserContext(request: Request) {
     } as const;
   }
 
-  return { user, supabaseAdmin } as const;
+  return {
+    user,
+    supabaseAdmin,
+    isOwner: empresa.plan === "owner",
+  } as const;
 }
 
 export async function GET(request: Request) {
@@ -76,6 +80,15 @@ export async function GET(request: Request) {
 
     if ("error" in context) {
       return context.error;
+    }
+
+    if (context.isOwner) {
+      return NextResponse.json({
+        ok: true,
+        unlimited: true,
+        dailyLimit: null,
+        remaining: null,
+      });
     }
 
     const { data, error } = await context.supabaseAdmin.rpc(
@@ -141,29 +154,36 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data: remainingAfterConsume, error: consumeError } =
-      await context.supabaseAdmin.rpc("consume_ai_generation", {
-        p_user_id: context.user.id,
-        p_limit: AI_DAILY_LIMIT,
-      });
+    let remainingAfterConsume: number | null = null;
+    let usageConsumed = false;
 
-    if (consumeError) {
-      throw new Error(`No se pudo registrar el uso de IA: ${consumeError.message}`);
+    if (!context.isOwner) {
+      const { data, error: consumeError } =
+        await context.supabaseAdmin.rpc("consume_ai_generation", {
+          p_user_id: context.user.id,
+          p_limit: AI_DAILY_LIMIT,
+        });
+
+      if (consumeError) {
+        throw new Error(`No se pudo registrar el uso de IA: ${consumeError.message}`);
+      }
+
+      remainingAfterConsume = typeof data === "number" ? data : null;
+
+      if (remainingAfterConsume === -1) {
+        return NextResponse.json(
+          {
+            ok: false,
+            mensaje: `Llegaste al límite de ${AI_DAILY_LIMIT} generaciones con IA de hoy. Podés volver a usarla mañana.`,
+            dailyLimit: AI_DAILY_LIMIT,
+            remaining: 0,
+          },
+          { status: 429 }
+        );
+      }
+
+      usageConsumed = true;
     }
-
-    if (remainingAfterConsume === -1) {
-      return NextResponse.json(
-        {
-          ok: false,
-          mensaje: `Llegaste al límite de ${AI_DAILY_LIMIT} generaciones con IA de hoy. Podés volver a usarla mañana.`,
-          dailyLimit: AI_DAILY_LIMIT,
-          remaining: 0,
-        },
-        { status: 429 }
-      );
-    }
-
-    let usageConsumed = true;
 
     const releaseUsage = async () => {
       if (!usageConsumed) return;
@@ -259,11 +279,11 @@ Reglas:
     return NextResponse.json({
       ok: true,
       descripcion,
-      dailyLimit: AI_DAILY_LIMIT,
-      remaining:
-        typeof remainingAfterConsume === "number"
-          ? remainingAfterConsume
-          : Math.max(AI_DAILY_LIMIT - 1, 0),
+      unlimited: context.isOwner,
+      dailyLimit: context.isOwner ? null : AI_DAILY_LIMIT,
+      remaining: context.isOwner
+        ? null
+        : remainingAfterConsume ?? Math.max(AI_DAILY_LIMIT - 1, 0),
     });
   } catch (error) {
     console.error("Error generando descripción con IA:", error);
