@@ -110,6 +110,7 @@ export default function EditarPresupuestoPage() {
       if (typeof data.remaining === "number") setAiRemaining(data.remaining);
       if (!response.ok || !data.descripcion) throw new Error(data.mensaje || "No pudimos generar la descripción.");
       setDescripcion(data.descripcion);
+      setDetalleIA("");
       if (itemIAObjetivoId !== null) {
         setItems((actuales) =>
           actuales.map((item) =>
