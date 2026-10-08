@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Navbar from "@/components/Navbar";
+import { syncMercadoPagoSubscription } from "@/lib/sync-subscription";
+
+type Plan = "free" | "pro" | "owner";
 
 export default function EditarPresupuestoPage() {
   const { id } = useParams();
@@ -15,10 +18,103 @@ export default function EditarPresupuestoPage() {
   const [items, setItems] = useState([{ id: 1, nombre: "", precio: "" }]);
   const total = items.reduce((sum, item) => sum + (Number(item.precio) || 0), 0);
   const [moneda, setMoneda] = useState("ARS");
+  const [plan, setPlan] = useState<Plan>("free");
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
+  const [subscriptionExpiresAt, setSubscriptionExpiresAt] = useState<string | null>(null);
+  const [detalleIA, setDetalleIA] = useState("");
+  const [generandoIA, setGenerandoIA] = useState(false);
+  const [errorIA, setErrorIA] = useState("");
+  const [aiRemaining, setAiRemaining] = useState<number | null>(null);
+  const [aiDailyLimit, setAiDailyLimit] = useState(20);
+  const [cargandoPlan, setCargandoPlan] = useState(true);
+
+  const suscripcionVencida = subscriptionExpiresAt !== null && new Date(subscriptionExpiresAt) < new Date();
+  const esOwner = plan === "owner";
+  const esProActivo = esOwner || (plan === "pro" && (subscriptionStatus === "active" || subscriptionStatus === "paused" || subscriptionStatus === "cancelled") && !suscripcionVencida);
 
   useEffect(() => {
     cargarPresupuesto();
+    cargarPlan();
   }, []);
+
+  useEffect(() => {
+    if (esProActivo) cargarUsoIA();
+    else setAiRemaining(null);
+  }, [esProActivo]);
+
+  async function cargarPlan() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+
+    await syncMercadoPagoSubscription();
+    const { data } = await supabase
+      .from("empresa")
+      .select("plan, subscription_status, subscription_expires_at")
+      .eq("user_id", user.id)
+      .single();
+
+    setPlan(data?.plan === "owner" ? "owner" : data?.plan === "pro" ? "pro" : "free");
+    setSubscriptionStatus(data?.subscription_status || null);
+    setSubscriptionExpiresAt(data?.subscription_expires_at || null);
+    setCargandoPlan(false);
+  }
+
+  async function cargarUsoIA() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      const response = await fetch("/api/ia/presupuesto", {
+        method: "GET",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        cache: "no-store",
+      });
+      if (!response.ok) return;
+      const data = await response.json() as { dailyLimit?: number; remaining?: number };
+      if (typeof data.dailyLimit === "number") setAiDailyLimit(data.dailyLimit);
+      if (typeof data.remaining === "number") setAiRemaining(data.remaining);
+    } catch (error) {
+      console.error("No se pudo cargar el uso de IA:", error);
+    }
+  }
+
+  async function generarDescripcionIA() {
+    setErrorIA("");
+    if (!esProActivo) {
+      router.push("/dashboard/planes");
+      return;
+    }
+    if (!esOwner && aiRemaining === 0) {
+      setErrorIA(`Llegaste al límite de ${aiDailyLimit} generaciones con IA de hoy. Podés volver a usarla mañana.`);
+      return;
+    }
+    if (detalleIA.trim().length < 8) {
+      setErrorIA("Contanos un poco más sobre el trabajo que querés describir.");
+      return;
+    }
+
+    setGenerandoIA(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("Tu sesión venció. Volvé a iniciar sesión.");
+      const response = await fetch("/api/ia/presupuesto", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ detalle: detalleIA }),
+      });
+      const data = await response.json() as { descripcion?: string; mensaje?: string; dailyLimit?: number; remaining?: number };
+      if (typeof data.dailyLimit === "number") setAiDailyLimit(data.dailyLimit);
+      if (typeof data.remaining === "number") setAiRemaining(data.remaining);
+      if (!response.ok || !data.descripcion) throw new Error(data.mensaje || "No pudimos generar la descripción.");
+      setDescripcion(data.descripcion);
+    } catch (error) {
+      setErrorIA(error instanceof Error ? error.message : "No pudimos generar la descripción. Intentá nuevamente.");
+    } finally {
+      setGenerandoIA(false);
+    }
+  }
 
   async function cargarPresupuesto() {
     const { data, error } = await supabase
@@ -97,6 +193,25 @@ export default function EditarPresupuestoPage() {
           <h1 className="text-3xl font-bold mb-6">
             Editar presupuesto
           </h1>
+
+          <section className={`mb-5 rounded-2xl border p-5 ${esProActivo ? "border-violet-200 bg-violet-50" : "border-slate-200 bg-white"}`}>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="font-bold text-slate-800">✨ Generar descripción con IA</h2>
+                <p className="mt-1 text-sm text-slate-600">Describí el trabajo y la IA redactará un texto profesional. Podés editarlo antes de guardar.</p>
+                {esProActivo && <p className="mt-2 text-xs font-medium text-violet-700">{esOwner ? "Generaciones con IA ilimitadas" : aiRemaining === null ? "Consultando cupo de IA..." : `Generaciones disponibles hoy: ${aiRemaining} / ${aiDailyLimit}`}</p>}
+              </div>
+              {!esProActivo && <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">Solo Pro</span>}
+            </div>
+            {esProActivo ? <>
+              <textarea className="mt-4 min-h-24 w-full rounded-xl border border-violet-200 bg-white p-3" placeholder="Ej.: Cambio de pantalla, revisión de conectores y pruebas de funcionamiento." value={detalleIA} maxLength={800} onChange={(e) => setDetalleIA(e.target.value)} />
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs text-slate-500">{detalleIA.length}/800 caracteres</span>
+                <button type="button" onClick={generarDescripcionIA} disabled={generandoIA || (!esOwner && aiRemaining === 0)} className="rounded-xl bg-violet-600 px-4 py-2 font-semibold text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-violet-300">{generandoIA ? "✨ Generando..." : !esOwner && aiRemaining === 0 ? "🔒 Límite diario alcanzado" : descripcion ? "✨ Generar / regenerar con IA" : "✨ Generar con IA"}</button>
+              </div>
+              {errorIA && <p className="mt-2 text-sm font-medium text-red-600">{errorIA}</p>}
+            </> : <button type="button" onClick={() => router.push("/dashboard/planes")} className="mt-4 rounded-xl bg-slate-800 px-4 py-2 font-semibold text-white hover:bg-slate-900">🚀 Desbloquear con Pro</button>}
+          </section>
 
           <form
             onSubmit={actualizarPresupuesto}
