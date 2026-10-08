@@ -195,6 +195,12 @@ export default function EditarPresupuestoPage() {
           </h1>
 
           <section className={`mb-5 rounded-2xl border p-5 ${esProActivo ? "border-violet-200 bg-violet-50" : "border-slate-200 bg-white"}`}>
+            {cargandoPlan ? (
+              <div className="animate-pulse">
+                <h2 className="font-bold text-slate-800">✨ Generar descripción con IA</h2>
+                <p className="mt-1 text-sm text-slate-500">Verificando tu cuenta y disponibilidad...</p>
+              </div>
+            ) : <>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h2 className="font-bold text-slate-800">✨ Generar descripción con IA</h2>
@@ -211,6 +217,7 @@ export default function EditarPresupuestoPage() {
               </div>
               {errorIA && <p className="mt-2 text-sm font-medium text-red-600">{errorIA}</p>}
             </> : <button type="button" onClick={() => router.push("/dashboard/planes")} className="mt-4 rounded-xl bg-slate-800 px-4 py-2 font-semibold text-white hover:bg-slate-900">🚀 Desbloquear con Pro</button>}
+            </>}
           </section>
 
           <form
