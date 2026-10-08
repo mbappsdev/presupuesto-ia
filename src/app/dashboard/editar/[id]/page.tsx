@@ -342,14 +342,14 @@ export default function EditarPresupuestoPage() {
                     <button
                       type="button"
                       onClick={() => {
+                        if (items.length <= 1) return;
                         setItems((actuales) => actuales.filter((actual) => actual.id !== item.id));
                         if (item.id === itemIAObjetivoId) {
                           setItemIAObjetivoId(null);
                           setDescripcion("");
                         }
                       }}
-                      disabled={items.length === 1}
-                      className="rounded-lg border border-red-200 px-3 py-2 text-red-600 hover:bg-red-50 disabled:opacity-40"
+                      className="rounded-lg border border-red-200 px-3 py-2 text-red-600 hover:bg-red-50"
                     >
                       Eliminar
                     </button>
