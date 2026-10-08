@@ -12,7 +12,8 @@ export default function NuevoPresupuestoPage() {
   const [cliente, setCliente] = useState("");
   const [empresa, setEmpresa] = useState("");
   const [descripcion, setDescripcion] = useState("");
-  const [precio, setPrecio] = useState("");
+  const [items, setItems] = useState([{ id: 1, nombre: "", precio: "" }]);
+  const total = items.reduce((sum, item) => sum + (Number(item.precio) || 0), 0);
   const [moneda, setMoneda] = useState("ARS");
 
   const [plan, setPlan] = useState<Plan>("free");
@@ -224,6 +225,22 @@ export default function NuevoPresupuestoPage() {
   async function crearPresupuesto(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
+    const itemsValidos = items.filter((item) => item.nombre.trim() && item.precio !== "" && Number(item.precio) >= 0);
+    if (itemsValidos.length === 0) {
+      alert("Agregá al menos un ítem con descripción e importe.");
+      return;
+    }
+    if (itemsValidos.length !== items.length) {
+      alert("Completá la descripción y el importe de todos los ítems, o eliminá los que no uses.");
+      return;
+    }
+
+    const descripcionCompleta = [
+      descripcion.trim(),
+      "Detalle de ítems:",
+      ...itemsValidos.map((item, index) => `${index + 1}. ${item.nombre.trim()} — ${moneda} ${Number(item.precio).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`),
+    ].filter(Boolean).join("\n\n");
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -261,8 +278,8 @@ export default function NuevoPresupuestoPage() {
         numero: nuevoNumero,
         cliente,
         empresa,
-        descripcion,
-        precio: Number(precio),
+        descripcion: descripcionCompleta,
+        precio: total,
         moneda,
       });
 
@@ -427,9 +444,10 @@ export default function NuevoPresupuestoPage() {
             onChange={(e) => setDescripcion(e.target.value)}
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+          <div className="mb-4">
+            <label className="mb-2 block font-semibold text-slate-700">Moneda del presupuesto</label>
             <select
-              className="border p-3 rounded-lg"
+              className="border p-3 rounded-lg w-full"
               value={moneda}
               onChange={(e) => setMoneda(e.target.value)}
             >
@@ -440,14 +458,63 @@ export default function NuevoPresupuestoPage() {
               <option value="CLP">🇨🇱 CLP - Peso chileno</option>
               <option value="UYU">🇺🇾 UYU - Peso uruguayo</option>
             </select>
-
-            <input
-              className="border p-3 rounded-lg md:col-span-2"
-              placeholder="Precio"
-              value={precio}
-              onChange={(e) => setPrecio(e.target.value)}
-            />
           </div>
+
+          <section className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-slate-800">Ítems del presupuesto</h2>
+                <p className="text-sm text-slate-500">Agregá todos los trabajos, productos o repuestos que necesites.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setItems((actuales) => [...actuales, { id: Math.max(0, ...actuales.map((item) => item.id)) + 1, nombre: "", precio: "" }])}
+                className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700"
+              >
+                + Agregar ítem
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {items.map((item, index) => (
+                <div key={item.id} className="grid grid-cols-1 gap-3 rounded-lg border border-slate-200 p-3 sm:grid-cols-[1fr_180px_auto]">
+                  <input
+                    className="w-full rounded-lg border p-3"
+                    placeholder={`Descripción del ítem ${index + 1}`}
+                    aria-label={`Descripción del ítem ${index + 1}`}
+                    value={item.nombre}
+                    onChange={(e) => setItems((actuales) => actuales.map((actual) => actual.id === item.id ? { ...actual, nombre: e.target.value } : actual))}
+                    required
+                  />
+                  <input
+                    className="w-full rounded-lg border p-3"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Importe"
+                    aria-label={`Importe del ítem ${index + 1}`}
+                    value={item.precio}
+                    onChange={(e) => setItems((actuales) => actuales.map((actual) => actual.id === item.id ? { ...actual, precio: e.target.value } : actual))}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setItems((actuales) => actuales.filter((actual) => actual.id !== item.id))}
+                    disabled={items.length === 1}
+                    className="rounded-lg border border-red-200 px-3 py-2 text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    aria-label={`Eliminar ítem ${index + 1}`}
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+              <span className="font-semibold text-slate-700">Total del presupuesto</span>
+              <span className="text-2xl font-bold text-blue-700">{moneda} {total.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+          </section>
 
           <button
             className="bg-blue-600 text-white px-6 py-3 rounded-xl w-full disabled:bg-slate-400 disabled:cursor-not-allowed"
