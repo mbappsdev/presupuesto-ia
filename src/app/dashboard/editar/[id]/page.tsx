@@ -12,7 +12,8 @@ export default function EditarPresupuestoPage() {
   const [cliente, setCliente] = useState("");
   const [empresa, setEmpresa] = useState("");
   const [descripcion, setDescripcion] = useState("");
-  const [precio, setPrecio] = useState("");
+  const [items, setItems] = useState([{ id: 1, nombre: "", precio: "" }]);
+  const total = items.reduce((sum, item) => sum + (Number(item.precio) || 0), 0);
   const [moneda, setMoneda] = useState("ARS");
 
   useEffect(() => {
@@ -33,9 +34,21 @@ export default function EditarPresupuestoPage() {
 
     setCliente(data.cliente);
     setEmpresa(data.empresa);
-    setDescripcion(data.descripcion);
-    setPrecio(data.precio.toString());
-    setMoneda(data.moneda || "ARS");
+    const monedaGuardada = data.moneda || "ARS";
+    const partesDescripcion = (data.descripcion || "").split(/\n\s*\nDetalle de ítems:\n/);
+    const descripcionBase = partesDescripcion[0] || "";
+    const detalleGuardado = partesDescripcion.length > 1 ? partesDescripcion.slice(1).join("\n\nDetalle de ítems:\n") : "";
+    const itemsGuardados = detalleGuardado.split("\n").map((linea: string, index: number) => {
+      const match = linea.match(/^\d+\.\s*(.*?)\s+—\s*[A-Z]{3}\s+([\d.,]+)$/);
+      if (!match) return null;
+      const importe = Number(match[2].replace(/\./g, "").replace(",", "."));
+      if (!Number.isFinite(importe)) return null;
+      return { id: index + 1, nombre: match[1], precio: String(importe) };
+    }).filter((item: { id: number; nombre: string; precio: string } | null): item is { id: number; nombre: string; precio: string } => item !== null);
+
+    setDescripcion(descripcionBase);
+    setItems(itemsGuardados.length ? itemsGuardados : [{ id: 1, nombre: "Trabajo o servicio presupuestado", precio: String(data.precio ?? 0) }]);
+    setMoneda(monedaGuardada);
   }
 
   async function actualizarPresupuesto(
@@ -43,13 +56,24 @@ export default function EditarPresupuestoPage() {
   ) {
     e.preventDefault();
 
+    if (items.length === 0 || items.some((item) => !item.nombre.trim() || item.precio === "" || !Number.isFinite(Number(item.precio)) || Number(item.precio) < 0)) {
+      alert("Completá la descripción y el importe de todos los ítems.");
+      return;
+    }
+
+    const descripcionCompleta = [
+      descripcion.trim(),
+      "Detalle de ítems:",
+      ...items.map((item, index) => `${index + 1}. ${item.nombre.trim()} — ${moneda} ${Number(item.precio).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`),
+    ].filter(Boolean).join("\n\n");
+
     const { error } = await supabase
       .from("presupuestos")
       .update({
         cliente,
         empresa,
-        descripcion,
-        precio: Number(precio),
+        descripcion: descripcionCompleta,
+        precio: total,
         moneda,
       })
       .eq("id", id);
@@ -99,12 +123,9 @@ export default function EditarPresupuestoPage() {
               onChange={(e) => setDescripcion(e.target.value)}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <select
-                className="border p-3 rounded"
-                value={moneda}
-                onChange={(e) => setMoneda(e.target.value)}
-              >
+<div>
+              <label className="mb-2 block font-semibold text-slate-700">Moneda del presupuesto</label>
+              <select className="w-full border p-3 rounded" value={moneda} onChange={(e) => setMoneda(e.target.value)}>
                 <option value="ARS">🇦🇷 ARS - Peso argentino</option>
                 <option value="USD">🇺🇸 USD - Dólar estadounidense</option>
                 <option value="EUR">🇪🇺 EUR - Euro</option>
@@ -112,15 +133,24 @@ export default function EditarPresupuestoPage() {
                 <option value="CLP">🇨🇱 CLP - Peso chileno</option>
                 <option value="UYU">🇺🇾 UYU - Peso uruguayo</option>
               </select>
-
-              <input
-                type="number"
-                className="border p-3 rounded md:col-span-2"
-                placeholder="Precio"
-                value={precio}
-                onChange={(e) => setPrecio(e.target.value)}
-              />
             </div>
+
+            <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div><h2 className="font-bold text-slate-800">Ítems del presupuesto</h2><p className="text-sm text-slate-500">Agregá o quitá trabajos, productos y repuestos.</p></div>
+                <button type="button" onClick={() => setItems((actuales) => [...actuales, { id: Math.max(0, ...actuales.map((item) => item.id)) + 1, nombre: "", precio: "" }])} className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700">+ Agregar ítem</button>
+              </div>
+              <div className="space-y-3">
+                {items.map((item, index) => (
+                  <div key={item.id} className="grid grid-cols-1 gap-3 rounded-lg border bg-white p-3 sm:grid-cols-[1fr_150px_auto]">
+                    <input className="w-full rounded-lg border p-3" placeholder={`Descripción del ítem ${index + 1}`} aria-label={`Descripción del ítem ${index + 1}`} value={item.nombre} onChange={(e) => setItems((actuales) => actuales.map((actual) => actual.id === item.id ? { ...actual, nombre: e.target.value } : actual))} required />
+                    <input type="number" min="0" step="0.01" className="w-full rounded-lg border p-3" placeholder="Importe" aria-label={`Importe del ítem ${index + 1}`} value={item.precio} onChange={(e) => setItems((actuales) => actuales.map((actual) => actual.id === item.id ? { ...actual, precio: e.target.value } : actual))} required />
+                    <button type="button" onClick={() => setItems((actuales) => actuales.filter((actual) => actual.id !== item.id))} disabled={items.length === 1} className="rounded-lg border border-red-200 px-3 py-2 text-red-600 hover:bg-red-50 disabled:opacity-40">Eliminar</button>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-5 flex items-center justify-between gap-3 border-t pt-4"><span className="font-semibold text-slate-700">Total del presupuesto</span><span className="text-xl font-bold text-blue-700">{moneda} {total.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+            </section>
 
             <button
               type="submit"
