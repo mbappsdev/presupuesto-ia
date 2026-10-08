@@ -16,6 +16,7 @@ export default function EditarPresupuestoPage() {
   const [empresa, setEmpresa] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [items, setItems] = useState([{ id: 1, nombre: "", precio: "" }]);
+  const [itemIAObjetivoId, setItemIAObjetivoId] = useState<number | null>(null);
   const total = items.reduce((sum, item) => sum + (Number(item.precio) || 0), 0);
   const [moneda, setMoneda] = useState("ARS");
   const [plan, setPlan] = useState<Plan>("free");
@@ -109,6 +110,15 @@ export default function EditarPresupuestoPage() {
       if (typeof data.remaining === "number") setAiRemaining(data.remaining);
       if (!response.ok || !data.descripcion) throw new Error(data.mensaje || "No pudimos generar la descripción.");
       setDescripcion(data.descripcion);
+      if (itemIAObjetivoId !== null) {
+        setItems((actuales) =>
+          actuales.map((item) =>
+            item.id === itemIAObjetivoId
+              ? { ...item, nombre: data.descripcion! }
+              : item
+          )
+        );
+      }
     } catch (error) {
       setErrorIA(error instanceof Error ? error.message : "No pudimos generar la descripción. Intentá nuevamente.");
     } finally {
@@ -142,8 +152,13 @@ export default function EditarPresupuestoPage() {
       return { id: index + 1, nombre: match[1], precio: String(importe) };
     }).filter((item: { id: number; nombre: string; precio: string } | null): item is { id: number; nombre: string; precio: string } => item !== null);
 
+    const itemsIniciales = itemsGuardados.length
+      ? itemsGuardados
+      : [{ id: 1, nombre: "", precio: String(data.precio ?? 0) }];
+
     setDescripcion(descripcionBase);
-    setItems(itemsGuardados.length ? itemsGuardados : [{ id: 1, nombre: "Trabajo o servicio presupuestado", precio: String(data.precio ?? 0) }]);
+    setItems(itemsIniciales);
+    setItemIAObjetivoId(null);
     setMoneda(monedaGuardada);
   }
 
@@ -152,7 +167,12 @@ export default function EditarPresupuestoPage() {
   ) {
     e.preventDefault();
 
-    if (items.length === 0 || items.some((item) => !item.nombre.trim() || item.precio === "" || !Number.isFinite(Number(item.precio)) || Number(item.precio) < 0)) {
+    const itemsParaGuardar =
+      items.length === 1 && !items[0].nombre.trim() && descripcion.trim()
+        ? [{ ...items[0], nombre: descripcion.trim() }]
+        : items;
+
+    if (itemsParaGuardar.length === 0 || itemsParaGuardar.some((item) => !item.nombre.trim() || item.precio === "" || !Number.isFinite(Number(item.precio)) || Number(item.precio) < 0)) {
       alert("Completá la descripción y el importe de todos los ítems.");
       return;
     }
@@ -160,7 +180,7 @@ export default function EditarPresupuestoPage() {
     const descripcionCompleta = [
       descripcion.trim(),
       "Detalle de ítems:",
-      ...items.map((item, index) => `${index + 1}. ${item.nombre.trim()} — ${moneda} ${Number(item.precio).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`),
+      ...itemsParaGuardar.map((item, index) => `${index + 1}. ${item.nombre.trim()} — ${moneda} ${Number(item.precio).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`),
     ].filter(Boolean).join("\n\n");
 
     const { error } = await supabase
@@ -242,7 +262,19 @@ export default function EditarPresupuestoPage() {
               className="w-full border p-3 rounded"
               placeholder="Descripción"
               value={descripcion}
-              onChange={(e) => setDescripcion(e.target.value)}
+              onChange={(e) => {
+                const valor = e.target.value;
+                setDescripcion(valor);
+                if (itemIAObjetivoId !== null) {
+                  setItems((actuales) =>
+                    actuales.map((item) =>
+                      item.id === itemIAObjetivoId
+                        ? { ...item, nombre: valor }
+                        : item
+                    )
+                  );
+                }
+              }}
             />
 
 <div>
@@ -260,14 +292,66 @@ export default function EditarPresupuestoPage() {
             <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div><h2 className="font-bold text-slate-800">Ítems del presupuesto</h2><p className="text-sm text-slate-500">Agregá o quitá trabajos, productos y repuestos.</p></div>
-                <button type="button" onClick={() => setItems((actuales) => [...actuales, { id: Math.max(0, ...actuales.map((item) => item.id)) + 1, nombre: "", precio: "" }])} className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700">+ Agregar ítem</button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nuevoId = Math.max(0, ...items.map((item) => item.id)) + 1;
+                    const descripcionActual = descripcion.trim();
+
+                    setItems((actuales) => {
+                      if (!descripcionActual) {
+                        return [...actuales, { id: nuevoId, nombre: "", precio: "" }];
+                      }
+
+                      const primerItemLibre = actuales.find((item) => !item.nombre.trim());
+                      if (primerItemLibre) {
+                        return [
+                          ...actuales.map((item) =>
+                            item.id === primerItemLibre.id
+                              ? { ...item, nombre: descripcionActual }
+                              : item
+                          ),
+                          { id: nuevoId, nombre: "", precio: "" },
+                        ];
+                      }
+
+                      return [
+                        ...actuales,
+                        { id: nuevoId, nombre: "", precio: "" },
+                      ];
+                    });
+
+                    setDescripcion("");
+                    setItemIAObjetivoId(nuevoId);
+                  }}
+                  className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700"
+                >
+                  + Agregar ítem
+                </button>
               </div>
               <div className="space-y-3">
                 {items.map((item, index) => (
                   <div key={item.id} className="grid grid-cols-1 gap-3 rounded-lg border bg-white p-3 sm:grid-cols-[1fr_150px_auto]">
-                    <input className="w-full rounded-lg border p-3" placeholder={`Descripción del ítem ${index + 1}`} aria-label={`Descripción del ítem ${index + 1}`} value={item.nombre} onChange={(e) => setItems((actuales) => actuales.map((actual) => actual.id === item.id ? { ...actual, nombre: e.target.value } : actual))} required />
+                    <input className="w-full rounded-lg border p-3" placeholder={`Descripción del ítem ${index + 1}`} aria-label={`Descripción del ítem ${index + 1}`} value={item.nombre} onChange={(e) => {
+                      const valor = e.target.value;
+                      setItems((actuales) => actuales.map((actual) => actual.id === item.id ? { ...actual, nombre: valor } : actual));
+                      if (item.id === itemIAObjetivoId) setDescripcion(valor);
+                    }} required />
                     <input type="number" min="0" step="0.01" className="w-full rounded-lg border p-3" placeholder="Importe" aria-label={`Importe del ítem ${index + 1}`} value={item.precio} onChange={(e) => setItems((actuales) => actuales.map((actual) => actual.id === item.id ? { ...actual, precio: e.target.value } : actual))} required />
-                    <button type="button" onClick={() => setItems((actuales) => actuales.filter((actual) => actual.id !== item.id))} disabled={items.length === 1} className="rounded-lg border border-red-200 px-3 py-2 text-red-600 hover:bg-red-50 disabled:opacity-40">Eliminar</button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setItems((actuales) => actuales.filter((actual) => actual.id !== item.id));
+                        if (item.id === itemIAObjetivoId) {
+                          setItemIAObjetivoId(null);
+                          setDescripcion("");
+                        }
+                      }}
+                      disabled={items.length === 1}
+                      className="rounded-lg border border-red-200 px-3 py-2 text-red-600 hover:bg-red-50 disabled:opacity-40"
+                    >
+                      Eliminar
+                    </button>
                   </div>
                 ))}
               </div>
