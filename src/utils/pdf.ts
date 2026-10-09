@@ -214,136 +214,132 @@ export async function generarPDF(presupuesto: {
   );
 
   // ==========================================
-  // DETALLE
+  // DETALLE DEL PRESUPUESTO: ÍTEMS E IMPORTES
   // ==========================================
 
-  const yDetalle = yCliente + 38;
+  const margenIzquierdo = 20;
+  const margenDerecho = 190;
+  const anchoDescripcion = 118;
+  const anchoImporte = 45;
+  const limiteInferior = 258;
+  let y = yCliente + 38;
+
+  // Los ítems se guardan en la descripción con este marcador.
+  // Separamos el texto introductorio de las líneas que contienen cada ítem.
+  const descripcionGuardada = presupuesto.descripcion || "";
+  const marcador = "Detalle de ítems:";
+  const indiceMarcador = descripcionGuardada.indexOf(marcador);
+  const textoGeneral = indiceMarcador >= 0
+    ? descripcionGuardada.slice(0, indiceMarcador).trim()
+    : "";
+  const textoItems = indiceMarcador >= 0
+    ? descripcionGuardada.slice(indiceMarcador + marcador.length).trim()
+    : "";
+
+  const items = textoItems
+    .split("\n")
+    .map((linea) => {
+      const match = linea.match(/^\d+\.\s*(.*?)\s+—\s*([A-Z]{3})\s+([\d.,]+)\s*$/);
+      if (!match) return null;
+      const importe = Number(match[3].replace(/\./g, "").replace(",", "."));
+      if (!Number.isFinite(importe)) return null;
+      return { descripcion: match[1].trim(), moneda: match[2], importe };
+    })
+    .filter((item): item is { descripcion: string; moneda: string; importe: number } => item !== null);
+
+  // Compatibilidad con presupuestos anteriores que todavía no tenían ítems.
+  const filas = items.length > 0
+    ? items
+    : [{
+        descripcion: descripcionGuardada.replace(/\s*Detalle de ítems:[\s\S]*$/i, "").trim() || descripcionGuardada,
+        moneda: presupuesto.moneda || "ARS",
+        importe: presupuesto.precio,
+      }];
+
+  function dibujarEncabezadoTabla(yEncabezado: number) {
+    doc.setFillColor(30, 64, 175);
+    doc.roundedRect(margenIzquierdo, yEncabezado - 6, 170, 10, 2, 2, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("Descripción", 25, yEncabezado);
+    doc.text("Importe", 185, yEncabezado, { align: "right" });
+    doc.setTextColor(0, 0, 0);
+    doc.setFont("helvetica", "normal");
+  }
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
+  doc.text("DETALLE DEL PRESUPUESTO", margenIzquierdo, y);
+  y += 8;
 
-  doc.text("DETALLE DEL PRESUPUESTO", 20, yDetalle);
+  if (textoGeneral) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    const lineasGenerales = doc.splitTextToSize(textoGeneral, 165);
+    const altoGeneral = lineasGenerales.length * 4.5;
+    if (y + altoGeneral + 16 > limiteInferior) {
+      doc.addPage();
+      y = 22;
+    }
+    doc.text(lineasGenerales, margenIzquierdo, y);
+    y += altoGeneral + 7;
+  }
 
-  // Encabezado de tabla
+  dibujarEncabezadoTabla(y);
+  y += 12;
 
-  const yTabla = yDetalle + 8;
+  filas.forEach((item) => {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    const lineasDescripcion = doc.splitTextToSize(item.descripcion, anchoDescripcion);
+    const altoFila = Math.max(lineasDescripcion.length * 5, 6);
+    if (y + altoFila + 12 > limiteInferior) {
+      doc.addPage();
+      y = 22;
+      dibujarEncabezadoTabla(y);
+      y += 12;
+    }
 
-  doc.setFillColor(30, 64, 175);
-
-  doc.roundedRect(
-    20,
-    yTabla - 6,
-    170,
-    10,
-    2,
-    2,
-    "F"
-  );
-
-  doc.setTextColor(255, 255, 255);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
-
-  doc.text("Descripción", 25, yTabla);
-
-  doc.text("Importe", 185, yTabla, {
-    align: "right",
+    doc.text(lineasDescripcion, 25, y);
+    const importeFormateado = formatearMoneda(item.importe, item.moneda || presupuesto.moneda || "ARS");
+    doc.text(`${item.moneda || presupuesto.moneda || "ARS"} ${importeFormateado}`, margenDerecho - 5, y, { align: "right" });
+    y += altoFila + 5;
+    doc.setDrawColor(220, 225, 232);
+    doc.line(margenIzquierdo, y - 2, margenDerecho, y - 2);
   });
 
-  // Contenido de la tabla
+  // El total siempre se dibuja después del último ítem. Si no entra,
+  // se pasa a una página nueva para que no quede cortado ni fuera del papel.
+  if (y + 22 > limiteInferior) {
+    doc.addPage();
+    y = 25;
+  } else {
+    y += 5;
+  }
 
-  doc.setTextColor(0, 0, 0);
-  doc.setFont("helvetica", "normal");
-
-  // Dejamos una columna reservada para el importe, para que descripciones largas
-  // (incluidas las generadas con IA) nunca se superpongan con el precio.
-  const descripcion = doc.splitTextToSize(
-    presupuesto.descripcion,
-    108
-  );
-
-  const yDescripcion = yTabla + 12;
-
-  // Descripción
-  doc.text(
-    descripcion,
-    25,
-    yDescripcion
-  );
-
-  // Importe
-  const precioFormateado = formatearMoneda(
+  const totalFormateado = formatearMoneda(
     presupuesto.precio,
     presupuesto.moneda || "ARS"
   );
 
-  doc.text(
-    `${presupuesto.moneda || "ARS"} ${precioFormateado}`,
-    185,
-    yDescripcion,
-    {
-      align: "right",
-    }
-  );
-
-  const altoDescripcion =
-    Math.max(descripcion.length, 1) * 6;
-
-  const ySeparador =
-    yDescripcion + altoDescripcion + 8;
-
-  doc.line(
-    20,
-    ySeparador,
-    190,
-    ySeparador
-  );
-
-  // ==========================================
-  // TOTAL
-  // ==========================================
-
-  const yTotal = ySeparador + 15;
-  
   doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.text("TOTAL", 125, y + 5, { align: "right" });
   doc.setFontSize(16);
+  doc.text(`${presupuesto.moneda || "ARS"} ${totalFormateado}`, margenDerecho, y + 5, { align: "right" });
 
-  doc.text(
-    `${presupuesto.moneda || "ARS"} ${precioFormateado}`,
-    185,
-    yTotal,
-    {
-      align: "right",
-    }
-  );
-
-  // ==========================================
-  // PIE DE PÁGINA
-  // ==========================================
-
-  doc.setFont("helvetica", "italic");
-  doc.setFontSize(10);
-
-  doc.text(
-    "Gracias por confiar en PresupuestoIA.",
-    105,
-    275,
-    {
-      align: "center",
-    }
-  );
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-
-  doc.text(
-    "Documento generado automáticamente.",
-    105,
-    282,
-    {
-      align: "center",
-    }
-  );
+  // Pie de página en todas las páginas.
+  const cantidadPaginas = doc.getNumberOfPages();
+  for (let pagina = 1; pagina <= cantidadPaginas; pagina++) {
+    doc.setPage(pagina);
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9);
+    doc.text("Gracias por confiar en PresupuestoIA.", 105, 275, { align: "center" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.text("Documento generado automáticamente.", 105, 282, { align: "center" });
+  }
 
   // ==========================================
   // NOMBRE DEL ARCHIVO
