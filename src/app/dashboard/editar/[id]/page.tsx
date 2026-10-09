@@ -142,15 +142,21 @@ export default function EditarPresupuestoPage() {
     setCliente(data.cliente);
     setEmpresa(data.empresa);
     const monedaGuardada = data.moneda || "ARS";
-    const partesDescripcion = (data.descripcion || "").split(/\n\s*\nDetalle de ítems:\n/);
-    const descripcionBase = partesDescripcion[0] || "";
-    const detalleGuardado = partesDescripcion.length > 1 ? partesDescripcion.slice(1).join("\n\nDetalle de ítems:\n") : "";
+    const descripcionGuardada = data.descripcion || "";
+    const marcadorItems = "Detalle de ítems:";
+    const indiceMarcador = descripcionGuardada.indexOf(marcadorItems);
+    const descripcionBase = indiceMarcador >= 0
+      ? descripcionGuardada.slice(0, indiceMarcador).trim()
+      : descripcionGuardada.trim();
+    const detalleGuardado = indiceMarcador >= 0
+      ? descripcionGuardada.slice(indiceMarcador + marcadorItems.length).trim()
+      : "";
     const itemsGuardados = detalleGuardado.split("\n").map((linea: string, index: number) => {
-      const match = linea.match(/^\d+\.\s*(.*?)\s+—\s*[A-Z]{3}\s+([\d.,]+)$/);
+      const match = linea.trim().match(/^\d+\.\s*(.*?)\s+—\s*[A-Z]{3}\s+([\d.,]+)\s*$/);
       if (!match) return null;
       const importe = Number(match[2].replace(/\./g, "").replace(",", "."));
       if (!Number.isFinite(importe)) return null;
-      return { id: index + 1, nombre: match[1], precio: String(importe) };
+      return { id: index + 1, nombre: match[1].trim(), precio: String(importe) };
     }).filter((item: { id: number; nombre: string; precio: string } | null): item is { id: number; nombre: string; precio: string } => item !== null);
 
     const itemsIniciales = itemsGuardados.length
