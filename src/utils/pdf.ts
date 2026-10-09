@@ -303,9 +303,11 @@ export async function generarPDF(presupuesto: {
     doc.text(lineasDescripcion, 25, y);
     const importeFormateado = formatearMoneda(item.importe, item.moneda || presupuesto.moneda || "ARS");
     doc.text(`${item.moneda || presupuesto.moneda || "ARS"} ${importeFormateado}`, margenDerecho - 5, y, { align: "right" });
-    y += altoFila + 6.5;
+    // Dibujamos el separador debajo del texto y dejamos espacio antes de la fila siguiente.
+    const yLineaSeparadora = y + altoFila + 2;
     doc.setDrawColor(220, 225, 232);
-    doc.line(margenIzquierdo, y - 2, margenDerecho, y - 2);
+    doc.line(margenIzquierdo, yLineaSeparadora, margenDerecho, yLineaSeparadora);
+    y = yLineaSeparadora + 7;
   });
 
   // El total siempre se dibuja después del último ítem. Si no entra,
