@@ -303,7 +303,7 @@ export async function generarPDF(presupuesto: {
     doc.text(lineasDescripcion, 25, y);
     const importeFormateado = formatearMoneda(item.importe, item.moneda || presupuesto.moneda || "ARS");
     doc.text(`${item.moneda || presupuesto.moneda || "ARS"} ${importeFormateado}`, margenDerecho - 5, y, { align: "right" });
-    y += altoFila + 5;
+    y += altoFila + 6.5;
     doc.setDrawColor(220, 225, 232);
     doc.line(margenIzquierdo, y - 2, margenDerecho, y - 2);
   });
