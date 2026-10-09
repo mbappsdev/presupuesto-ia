@@ -220,7 +220,6 @@ export async function generarPDF(presupuesto: {
   const margenIzquierdo = 20;
   const margenDerecho = 190;
   const anchoDescripcion = 118;
-  const anchoImporte = 45;
   const limiteInferior = 258;
   let y = yCliente + 38;
 
