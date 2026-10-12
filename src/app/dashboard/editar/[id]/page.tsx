@@ -109,9 +109,9 @@ export default function EditarPresupuestoPage() {
       if (typeof data.dailyLimit === "number") setAiDailyLimit(data.dailyLimit);
       if (typeof data.remaining === "number") setAiRemaining(data.remaining);
       if (!response.ok || !data.descripcion) throw new Error(data.mensaje || "No pudimos generar la descripción.");
-      setDescripcion(data.descripcion);
       setDetalleIA("");
       if (itemIAObjetivoId !== null) {
+        // Si la IA está trabajando sobre un ítem, el texto va solo allí.
         setItems((actuales) =>
           actuales.map((item) =>
             item.id === itemIAObjetivoId
@@ -119,6 +119,9 @@ export default function EditarPresupuestoPage() {
               : item
           )
         );
+        setDescripcion("");
+      } else {
+        setDescripcion(data.descripcion);
       }
     } catch (error) {
       setErrorIA(error instanceof Error ? error.message : "No pudimos generar la descripción. Intentá nuevamente.");
