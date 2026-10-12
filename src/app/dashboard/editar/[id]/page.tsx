@@ -170,7 +170,8 @@ export default function EditarPresupuestoPage() {
       texto.replace(/\s+/g, " ").trim().toLocaleLowerCase("es");
 
     const descripcionDuplicadaEnItem = itemsGuardados.some(
-      (item) => normalizarTexto(item.nombre) === normalizarTexto(descripcionBase)
+      (item: { id: number; nombre: string; precio: string }) =>
+        normalizarTexto(item.nombre) === normalizarTexto(descripcionBase)
     );
 
     setDescripcion(descripcionDuplicadaEnItem ? "" : descripcionBase);
