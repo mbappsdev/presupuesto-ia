@@ -166,15 +166,7 @@ export default function EditarPresupuestoPage() {
       ? itemsGuardados
       : [{ id: 1, nombre: "", precio: String(data.precio ?? 0) }];
 
-    // Si el texto general es idéntico a uno de los ítems guardados,
-    // es una duplicación del flujo anterior y no debe reaparecer arriba.
-    const descripcionParaEditar = itemsGuardados.some(
-      (item) => item.nombre.trim() === descripcionBase.trim()
-    )
-      ? ""
-      : descripcionBase;
-
-    setDescripcion(descripcionParaEditar);
+    setDescripcion(descripcionBase);
     setItems(itemsIniciales);
     setItemIAObjetivoId(null);
     setMoneda(monedaGuardada);
