@@ -211,9 +211,10 @@ export default function NuevoPresupuestoPage() {
         throw new Error(data.mensaje || "No pudimos generar la descripción.");
       }
 
-      setDescripcion(data.descripcion);
       setDetalleIA("");
       if (itemIAObjetivoId !== null) {
+        // Si estamos generando para un ítem, el texto pertenece a ese ítem,
+        // no a la descripción general del presupuesto.
         setItems((actuales) =>
           actuales.map((item) =>
             item.id === itemIAObjetivoId
@@ -221,6 +222,9 @@ export default function NuevoPresupuestoPage() {
               : item
           )
         );
+        setDescripcion("");
+      } else {
+        setDescripcion(data.descripcion);
       }
     } catch (error) {
       setErrorIA(
