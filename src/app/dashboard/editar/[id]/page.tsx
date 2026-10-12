@@ -166,7 +166,14 @@ export default function EditarPresupuestoPage() {
       ? itemsGuardados
       : [{ id: 1, nombre: "", precio: String(data.precio ?? 0) }];
 
-    setDescripcion(descripcionBase);
+    const normalizarTexto = (texto: string) =>
+      texto.replace(/\s+/g, " ").trim().toLocaleLowerCase("es");
+
+    const descripcionDuplicadaEnItem = itemsGuardados.some(
+      (item) => normalizarTexto(item.nombre) === normalizarTexto(descripcionBase)
+    );
+
+    setDescripcion(descripcionDuplicadaEnItem ? "" : descripcionBase);
     setItems(itemsIniciales);
     setItemIAObjetivoId(null);
     setMoneda(monedaGuardada);
